@@ -5,9 +5,10 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Calendar, Clock, MapPin, CreditCard, ArrowRight } from "lucide-react"
-import { supabase, type Reserva } from "@/lib/supabase"
+import { CheckCircle, Calendar, Clock, MapPin, Phone, CreditCard, Download, Share2 } from "lucide-react"
 import { formatearPrecio } from "@/utils/formatters"
+import type { Reserva } from "@/types"
+import Link from "next/link"
 
 export default function ConfirmacionPage() {
   const params = useParams()
@@ -16,213 +17,162 @@ export default function ConfirmacionPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchReserva = async () => {
-      if (!params.id) return
+    const reservaId = params.id as string
+    const reservasGuardadas = JSON.parse(localStorage.getItem("reservas") || "[]")
+    const reservaEncontrada = reservasGuardadas.find((r: Reserva) => r.id === reservaId)
 
-      try {
-        const { data, error } = await supabase
-          .from("reservas")
-          .select(`
-            *,
-            cancha:canchas (
-              *,
-              establecimiento:establecimientos (*)
-            )
-          `)
-          .eq("id", params.id)
-          .single()
-
-        if (error) throw error
-        setReserva(data)
-      } catch (error) {
-        console.error("Error fetching reserva:", error)
-      } finally {
-        setLoading(false)
-      }
+    if (reservaEncontrada) {
+      setReserva(reservaEncontrada)
     }
-
-    fetchReserva()
+    setLoading(false)
   }, [params.id])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div>Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p>Cargando confirmación...</p>
+        </div>
       </div>
     )
   }
 
   if (!reserva) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Reserva no encontrada</h3>
-            <p className="text-gray-600 mb-4">La reserva que buscas no existe o ha sido eliminada.</p>
-            <Button onClick={() => router.push("/")}>Volver al inicio</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Reserva no encontrada</h1>
+          <p className="text-gray-600 mb-4">No se pudo encontrar la reserva solicitada</p>
+          <Link href="/">
+            <Button className="bg-green-600 hover:bg-green-700">Volver al Inicio</Button>
+          </Link>
+        </div>
       </div>
     )
+  }
+
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case "confirmada":
+        return <Badge className="bg-green-100 text-green-800">Confirmada</Badge>
+      case "pendiente":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
+      default:
+        return <Badge variant="secondary">{estado}</Badge>
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Header de confirmación */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Reserva Confirmada!</h1>
-            <p className="text-gray-600">
-              Tu reserva ha sido {reserva.estado === "paid" ? "confirmada y pagada" : "creada exitosamente"}
-            </p>
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Reserva Confirmada!</h1>
+          <p className="text-gray-600">Tu reserva ha sido procesada exitosamente</p>
+        </div>
 
-          {/* Detalles de la reserva */}
-          <Card className="mb-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Card>
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
-                  <CardTitle className="text-xl">{reserva.cancha?.establecimiento?.nombre}</CardTitle>
-                  <CardDescription className="flex items-center mt-1">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {reserva.cancha?.establecimiento?.ubicacion}
-                  </CardDescription>
+                  <CardTitle className="text-xl">Ticket de Reserva</CardTitle>
+                  <CardDescription>ID: {reserva.id}</CardDescription>
                 </div>
-                <Badge
-                  variant={reserva.estado === "paid" ? "default" : "secondary"}
-                  className={reserva.estado === "paid" ? "bg-green-600" : ""}
-                >
-                  {reserva.estado === "paid" ? "Pagado" : "Pendiente de Pago"}
-                </Badge>
+                {getEstadoBadge(reserva.estado)}
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Detalles de la Reserva</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">ID de Reserva:</span>
-                        <span className="font-mono">{reserva.id.slice(0, 8)}...</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Cancha:</span>
-                        <span>{reserva.cancha?.nombre}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Tipo:</span>
-                        <span>{reserva.cancha?.tipo}</span>
-                      </div>
-                    </div>
-                  </div>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Establecimiento</h3>
+                  <p className="text-sm text-gray-600">{reserva.establecimiento}</p>
+                  <p className="text-sm text-gray-600">
+                    {reserva.cancha} - {reserva.zona}
+                  </p>
+                </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Fecha y Horario</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>
-                          {new Date(reserva.fecha).toLocaleDateString("es-PE", {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>
-                          {reserva.hora_inicio} - {reserva.hora_fin}
-                        </span>
-                      </div>
-                    </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Fecha y Hora</h3>
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {new Date(reserva.fecha).toLocaleDateString("es-PE", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock className="mr-2 h-4 w-4" />
+                    {reserva.horarios.join(", ")}
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Información de Contacto</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Teléfono:</span>
-                        <span>{reserva.cancha?.establecimiento?.telefono}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Dirección:</span>
-                        <span className="text-right">{reserva.cancha?.establecimiento?.direccion}</span>
-                      </div>
-                    </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Ubicación</h3>
+                  <div className="flex items-start text-sm text-gray-600 mb-1">
+                    <MapPin className="mr-2 h-4 w-4 mt-0.5" />
+                    <span>{reserva.direccion}</span>
                   </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Phone className="mr-2 h-4 w-4" />
+                    <span>{reserva.telefono}</span>
+                  </div>
+                </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Resumen de Pago</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Subtotal:</span>
-                        <span>{formatearPrecio(reserva.precio_total)}</span>
-                      </div>
-                      <div className="flex justify-between font-medium text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span className="text-green-600">{formatearPrecio(reserva.precio_total)}</span>
-                      </div>
-                    </div>
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">Pago</h3>
+                  <div className="flex items-center text-sm text-gray-600 mb-1">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span className="capitalize">{reserva.metodoPago}</span>
                   </div>
+                  <p className="text-lg font-bold text-green-600">{formatearPrecio(reserva.precio)}</p>
                 </div>
               </div>
-
-              {reserva.notas && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">Notas adicionales</h4>
-                  <p className="text-sm text-gray-600">{reserva.notas}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          {/* Acciones */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={() => router.push("/dashboard")} className="flex-1 bg-green-600 hover:bg-green-700">
-              Ver Mi Dashboard
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+          <Card>
+            <CardHeader>
+              <CardTitle>Instrucciones Importantes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <p className="text-sm text-gray-600">
+                  Llega al establecimiento 10 minutos antes de tu horario reservado
+                </p>
+              </div>
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <p className="text-sm text-gray-600">Presenta este ticket o tu documento de identidad</p>
+              </div>
+              <div className="flex items-start">
+                <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                <p className="text-sm text-gray-600">
+                  Para cancelaciones, contacta al establecimiento con al menos 2 horas de anticipación
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-            {reserva.estado === "pending" && (
-              <Button
-                variant="outline"
-                className="flex-1 bg-transparent"
-                onClick={() => {
-                  // Aquí se integraría con la pasarela de pagos
-                  alert("Redirigiendo a la pasarela de pagos...")
-                }}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                Completar Pago
-              </Button>
-            )}
-
-            <Button variant="outline" onClick={() => router.push("/")}>
-              Hacer Otra Reserva
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button variant="outline" className="flex-1 bg-transparent">
+              <Download className="mr-2 h-4 w-4" />
+              Descargar Ticket
             </Button>
+            <Button variant="outline" className="flex-1 bg-transparent">
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartir
+            </Button>
+            <Link href="/mis-reservas" className="flex-1">
+              <Button className="w-full bg-green-600 hover:bg-green-700">Ver Mis Reservas</Button>
+            </Link>
           </div>
-
-          {/* Información adicional */}
-          <Card className="mt-6">
-            <CardContent className="pt-6">
-              <h4 className="font-medium text-gray-900 mb-3">Información Importante</h4>
-              <ul className="text-sm text-gray-600 space-y-2">
-                <li>• Llega 10 minutos antes de tu horario reservado</li>
-                <li>• Presenta tu ID de reserva en recepción</li>
-                <li>• Las cancelaciones deben hacerse con 24 horas de anticipación</li>
-                <li>• Revisa las reglas del establecimiento antes de tu visita</li>
-              </ul>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

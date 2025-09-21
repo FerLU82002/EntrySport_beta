@@ -2,11 +2,10 @@
 
 import { useMemo } from "react"
 import { useAppContext } from "@/contexts/AppContext"
-import { useCanchas } from "@/hooks/useCanchas"
+import { canchas } from "@/data/canchas"
 
 export function useFiltros() {
   const { state, dispatch } = useAppContext()
-  const { canchas } = useCanchas()
   const { filtros } = state
 
   const canchasFiltradas = useMemo(() => {
@@ -29,7 +28,7 @@ export function useFiltros() {
 
       return cumpleTipo && cumpleUbicacion && cumplePrecio && cumpleBusqueda
     })
-  }, [filtros, canchas])
+  }, [filtros])
 
   const setFiltroTipo = (tipo: string) => {
     dispatch({ type: "SET_FILTRO_TIPO", payload: tipo })

@@ -19,6 +19,10 @@ const initialState: AppState = {
     isDetailsOpen: false,
     isLoginOpen: false,
   },
+  checkout: {
+    isOpen: false,
+    reservaData: null,
+  },
 }
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -130,6 +134,37 @@ function appReducer(state: AppState, action: AppAction): AppState {
         reserva: {
           ...state.reserva,
           isLoginOpen: false,
+        },
+      }
+    case "ABRIR_CHECKOUT":
+      return {
+        ...state,
+        checkout: {
+          isOpen: true,
+          reservaData: action.payload,
+        },
+      }
+    case "CERRAR_CHECKOUT":
+      return {
+        ...state,
+        checkout: {
+          isOpen: false,
+          reservaData: null,
+        },
+      }
+    case "CONFIRMAR_RESERVA":
+      return {
+        ...state,
+        checkout: {
+          isOpen: false,
+          reservaData: null,
+        },
+        reserva: {
+          ...state.reserva,
+          selectedCancha: null,
+          selectedZona: null,
+          selectedHorarios: [],
+          isDetailsOpen: false,
         },
       }
     default:

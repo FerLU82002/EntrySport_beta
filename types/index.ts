@@ -55,9 +55,39 @@ export interface ReservaState {
   isLoginOpen: boolean
 }
 
+export interface Reserva {
+  id: string
+  userId: string
+  canchaId: number
+  zonaId: string
+  fecha: string
+  horarios: string[]
+  precio: number
+  estado: "pendiente" | "confirmada" | "cancelada" | "completada"
+  fechaCreacion: string
+  metodoPago: string
+  establecimiento: string
+  cancha: string
+  zona: string
+  direccion: string
+  telefono: string
+}
+
+export interface CheckoutState {
+  isOpen: boolean
+  reservaData: {
+    cancha: Cancha | null
+    zona: Zona | null
+    fecha: Date
+    horarios: string[]
+    total: number
+  } | null
+}
+
 export interface AppState {
   filtros: FiltrosState
   reserva: ReservaState
+  checkout: CheckoutState
 }
 
 export type AppAction =
@@ -74,3 +104,6 @@ export type AppAction =
   | { type: "LIMPIAR_HORARIOS" }
   | { type: "ABRIR_LOGIN" }
   | { type: "CERRAR_LOGIN" }
+  | { type: "ABRIR_CHECKOUT"; payload: { cancha: Cancha; zona: Zona; fecha: Date; horarios: string[]; total: number } }
+  | { type: "CERRAR_CHECKOUT" }
+  | { type: "CONFIRMAR_RESERVA"; payload: Reserva }

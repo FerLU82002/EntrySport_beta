@@ -8,61 +8,53 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
-import { useAuth } from "@/hooks/useAuth"
 import { useReserva } from "@/hooks/useReserva"
+import { useAuth } from "@/hooks/useAuth"
+import { Loader2 } from "lucide-react"
 
 export function LoginModal() {
   const { reserva, cerrarLogin } = useReserva()
-  const { signIn, signUp } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-
-  const [loginForm, setLoginForm] = useState({
-    email: "",
-    password: "",
-  })
-
+  const { login, register, isLoading } = useAuth()
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" })
   const [registerForm, setRegisterForm] = useState({
     email: "",
     password: "",
-    fullName: "",
-    phone: "",
+    nombre: "",
+    telefono: "",
   })
+  const [error, setError] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
+    setError("")
 
-    const { error } = await signIn(loginForm.email, loginForm.password)
-
-    if (error) {
-      setError(error.message)
-    } else {
+    const success = await login(loginForm.email, loginForm.password)
+    if (success) {
       cerrarLogin()
+    } else {
+      setError(
+        "Credenciales inválidas. Usa: usuario@gmail.com o admin@gmail.com con cualquier contraseña de 6+ caracteres",
+      )
     }
-
-    setLoading(false)
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
+    setError("")
 
-    const { error } = await signUp(registerForm.email, registerForm.password, registerForm.fullName, registerForm.phone)
-
-    if (error) {
-      setError(error.message)
+    const success = await register(
+      registerForm.email,
+      registerForm.password,
+      registerForm.nombre,
+      registerForm.telefono,
+    )
+    if (success) {
+      cerrarLogin()
     } else {
-      setSuccess("¡Cuenta creada exitosamente! Revisa tu email para confirmar tu cuenta.")
+      setError(
+        "Error al registrar. Verifica que todos los campos estén completos y la contraseña tenga al menos 6 caracteres",
+      )
     }
-
-    setLoading(false)
   }
 
   return (
@@ -73,17 +65,12 @@ export function LoginModal() {
           <DialogDescription>Inicia sesión para reservar canchas en toda la ciudad</DialogDescription>
         </DialogHeader>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )}
+        <div className="bg-blue-50 p-3 rounded-lg text-sm">
+          <p className="font-medium text-blue-800 mb-1">Credenciales Demo:</p>
+          <p className="text-blue-700">• usuario@gmail.com (Usuario General)</p>
+          <p className="text-blue-700">• admin@gmail.com (Dueño de Cancha)</p>
+          <p className="text-blue-700">• Contraseña: cualquier texto de 6+ caracteres</p>
+        </div>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -98,9 +85,9 @@ export function LoginModal() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder="usuario@gmail.com"
                   value={loginForm.email}
-                  onChange={(e) => setLoginForm((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   required
                 />
               </div>
@@ -109,14 +96,24 @@ export function LoginModal() {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="demo123"
                   value={loginForm.password}
-                  onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Iniciar Sesión
+
+              {error && <div className="text-red-600 text-sm bg-red-50 p-2 rounded">{error}</div>}
+
+              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  "Iniciar Sesión"
+                )}
               </Button>
             </form>
           </TabsContent>
@@ -124,12 +121,12 @@ export function LoginModal() {
           <TabsContent value="register" className="space-y-4">
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Nombre completo</Label>
+                <Label htmlFor="name">Nombre completo</Label>
                 <Input
-                  id="fullName"
+                  id="name"
                   placeholder="Tu nombre"
-                  value={registerForm.fullName}
-                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                  value={registerForm.nombre}
+                  onChange={(e) => setRegisterForm({ ...registerForm, nombre: e.target.value })}
                   required
                 />
               </div>
@@ -140,7 +137,7 @@ export function LoginModal() {
                   type="email"
                   placeholder="tu@email.com"
                   value={registerForm.email}
-                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                   required
                 />
               </div>
@@ -149,8 +146,8 @@ export function LoginModal() {
                 <Input
                   id="phone"
                   placeholder="+51 987 654 321"
-                  value={registerForm.phone}
-                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  value={registerForm.telefono}
+                  onChange={(e) => setRegisterForm({ ...registerForm, telefono: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
@@ -158,14 +155,24 @@ export function LoginModal() {
                 <Input
                   id="password-register"
                   type="password"
+                  placeholder="Mínimo 6 caracteres"
                   value={registerForm.password}
-                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Crear Cuenta
+
+              {error && <div className="text-red-600 text-sm bg-red-50 p-2 rounded">{error}</div>}
+
+              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creando cuenta...
+                  </>
+                ) : (
+                  "Crear Cuenta"
+                )}
               </Button>
             </form>
           </TabsContent>

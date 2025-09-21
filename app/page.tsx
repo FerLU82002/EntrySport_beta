@@ -7,7 +7,7 @@ import { FiltrosSection } from "@/components/FiltrosSection"
 import { CanchasGrid } from "@/components/CanchasGrid"
 import { LoginModal } from "@/components/LoginModal"
 import { DetallesModal } from "@/components/DetallesModal"
-import { SupabaseStatus } from "@/components/SupabaseStatus"
+import { CheckoutModal } from "@/components/CheckoutModal"
 import { Search, Calendar, Users, Phone, Mail, MapPin } from "lucide-react"
 
 export default function HomePage() {
@@ -15,17 +15,12 @@ export default function HomePage() {
     <AppProvider>
       <div className="min-h-screen bg-background">
         <Header />
-
-        {/* Agregar estado de Supabase después del header */}
-        <div className="container mx-auto px-4 pt-4">
-          <SupabaseStatus />
-        </div>
-
         <HeroSection />
         <FiltrosSection />
         <CanchasGrid />
         <LoginModal />
         <DetallesModal />
+        <CheckoutModal />
 
         {/* Resto de secciones estáticas */}
         <section id="como-funciona" className="py-16 bg-gray-50">
@@ -49,7 +44,6 @@ export default function HomePage() {
 
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {/* Cambiar CalendarIcon por Calendar en la sección "Cómo funciona" */}
                   <Calendar className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">2. Selecciona zona y horario</h3>

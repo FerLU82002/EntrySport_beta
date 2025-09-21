@@ -2,16 +2,13 @@
 
 import { useAppContext } from "@/contexts/AppContext"
 import { useAuth } from "@/hooks/useAuth"
-import { useReservas } from "@/hooks/useReservas"
-import { useCanchas } from "@/hooks/useCanchas"
+import { horariosReservados } from "@/data/canchas"
 import type { Cancha, Zona } from "@/types"
-import { formatearFecha, formatearPrecio } from "@/utils/formatters"
+import { formatearFecha } from "@/utils/formatters"
 
 export function useReserva() {
   const { state, dispatch } = useAppContext()
-  const { user, isAuthenticated } = useAuth()
-  const { createReserva } = useReservas()
-  const { getHorariosDisponibles, useSupabase } = useCanchas()
+  const { user } = useAuth()
   const { reserva } = state
 
   const abrirDetalles = (cancha: Cancha) => {
@@ -30,8 +27,8 @@ export function useReserva() {
     dispatch({ type: "SET_FECHA", payload: fecha })
   }
 
-  const toggleHorario = async (horario: string) => {
-    if (await esHorarioDisponible(horario)) {
+  const toggleHorario = (horario: string) => {
+    if (esHorarioDisponible(horario)) {
       dispatch({ type: "TOGGLE_HORARIO", payload: horario })
     }
   }
@@ -44,28 +41,12 @@ export function useReserva() {
     dispatch({ type: "CERRAR_LOGIN" })
   }
 
-  const esHorarioDisponible = async (horario: string): Promise<boolean> => {
+  const esHorarioDisponible = (horario: string): boolean => {
     if (!reserva.selectedCancha || !reserva.selectedZona) return false
 
     const fechaStr = formatearFecha(reserva.selectedDate)
-
-    try {
-      // Obtener horarios ocupados
-      const horariosOcupados = await getHorariosDisponibles(reserva.selectedCancha.id.toString(), fechaStr)
-
-      // Verificar si el horario está ocupado
-      const horaInicio = horario
-      const horaFin = `${Number.parseInt(horario.split(":")[0]) + 1}:00`
-
-      return !horariosOcupados.some(
-        (ocupado) =>
-          (horaInicio >= ocupado.inicio && horaInicio < ocupado.fin) ||
-          (horaFin > ocupado.inicio && horaFin <= ocupado.fin),
-      )
-    } catch (error) {
-      console.error("Error checking horario disponibilidad:", error)
-      return true // En caso de error, asumir que está disponible
-    }
+    const reservados = horariosReservados[reserva.selectedCancha.id]?.[reserva.selectedZona.id]?.[fechaStr] || []
+    return !reservados.includes(horario)
   }
 
   const calcularTotal = (): number => {
@@ -73,7 +54,7 @@ export function useReserva() {
     return reserva.selectedZona.precio * reserva.selectedHorarios.length
   }
 
-  const realizarReserva = async () => {
+  const realizarReserva = () => {
     if (reserva.selectedHorarios.length === 0) {
       alert("Por favor selecciona al menos un horario")
       return
@@ -81,52 +62,41 @@ export function useReserva() {
 
     if (!reserva.selectedCancha || !reserva.selectedZona) return
 
-    if (!isAuthenticated) {
+    if (!user) {
       abrirLogin()
       return
     }
 
-    // Si no estamos usando Supabase, mostrar mensaje de demo
-    if (!useSupabase) {
-      alert(
-        `DEMO - Reserva simulada:\nEstablecimiento: ${reserva.selectedCancha.establecimiento}\nZona: ${reserva.selectedZona.nombre}\nFecha: ${reserva.selectedDate.toLocaleDateString()}\nHorarios: ${reserva.selectedHorarios.join(", ")}\nTotal: ${formatearPrecio(calcularTotal())}\n\n(Esta es una demostración. En producción se crearía la reserva real.)`,
-      )
-      cerrarDetalles()
-      return
-    }
+    dispatch({
+      type: "ABRIR_CHECKOUT",
+      payload: {
+        cancha: reserva.selectedCancha,
+        zona: reserva.selectedZona,
+        fecha: reserva.selectedDate,
+        horarios: [...reserva.selectedHorarios],
+        total: calcularTotal(),
+      },
+    })
+    cerrarDetalles()
+  }
 
-    try {
-      // Crear la reserva en Supabase
-      const horaInicio = reserva.selectedHorarios[0]
-      const horaFin = `${Number.parseInt(reserva.selectedHorarios[reserva.selectedHorarios.length - 1].split(":")[0]) + 1}:00`
+  const abrirCheckout = () => {
+    if (!reserva.selectedCancha || !reserva.selectedZona || reserva.selectedHorarios.length === 0) return
 
-      const { data, error } = await createReserva(
-        reserva.selectedCancha.id.toString(),
-        formatearFecha(reserva.selectedDate),
-        horaInicio,
-        horaFin,
-        calcularTotal(),
-        `Horarios: ${reserva.selectedHorarios.join(", ")}`,
-      )
+    dispatch({
+      type: "ABRIR_CHECKOUT",
+      payload: {
+        cancha: reserva.selectedCancha,
+        zona: reserva.selectedZona,
+        fecha: reserva.selectedDate,
+        horarios: [...reserva.selectedHorarios],
+        total: calcularTotal(),
+      },
+    })
+  }
 
-      if (error) {
-        alert(`Error al crear la reserva: ${error.message}`)
-        return
-      }
-
-      // Mostrar confirmación y redirigir a pago
-      alert(
-        `Reserva creada exitosamente!\nEstablecimiento: ${reserva.selectedCancha.establecimiento}\nZona: ${reserva.selectedZona.nombre}\nFecha: ${reserva.selectedDate.toLocaleDateString()}\nHorarios: ${reserva.selectedHorarios.join(", ")}\nTotal: ${formatearPrecio(calcularTotal())}\n\nSerás redirigido al dashboard.`,
-      )
-
-      cerrarDetalles()
-
-      // Redirigir al dashboard
-      window.location.href = "/dashboard"
-    } catch (error) {
-      console.error("Error al realizar reserva:", error)
-      alert("Error inesperado al crear la reserva")
-    }
+  const cerrarCheckout = () => {
+    dispatch({ type: "CERRAR_CHECKOUT" })
   }
 
   return {
@@ -141,5 +111,7 @@ export function useReserva() {
     esHorarioDisponible,
     calcularTotal,
     realizarReserva,
+    abrirCheckout,
+    cerrarCheckout,
   }
 }
