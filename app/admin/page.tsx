@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,36 +12,32 @@ import { CanchasManager } from "@/components/admin/CanchasManager"
 import { CalendarioManager } from "@/components/admin/CalendarioManager"
 import { ReservasManager } from "@/components/admin/ReservasManager"
 import { EstadisticasPanel } from "@/components/admin/EstadisticasPanel"
+import { EstablecimientoManager } from "@/components/admin/EstablecimientoManager"
 import type { Cancha } from "@/types"
 
 export default function AdminPage() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
+  const router = useRouter()
   const [canchasDelDueno, setCanchasDelDueno] = useState<Cancha[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user?.tipo === "dueno") {
-      const canchasGuardadas = JSON.parse(localStorage.getItem("canchas-dueno") || "[]")
-      setCanchasDelDueno(canchasGuardadas)
+    if (!isLoading && user?.tipo !== "dueno") {
+      router.push("/")
     }
-    setLoading(false)
-  }, [user])
+  }, [user, isLoading, router])
 
-  if (!user || user.tipo !== "dueno") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Acceso Denegado</h1>
-          <p className="text-gray-600 mb-4">Solo los dueños de canchas pueden acceder a este panel</p>
-          <Link href="/">
-            <Button className="bg-green-600 hover:bg-green-700">Volver al Inicio</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!isLoading) {
+      if (user?.tipo === "dueno") {
+        const canchasGuardadas = JSON.parse(localStorage.getItem("canchas-dueno") || "[]")
+        setCanchasDelDueno(canchasGuardadas)
+      }
+      setLoading(false)
+    }
+  }, [user, isLoading])
 
-  if (loading) {
+  if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -51,12 +48,35 @@ export default function AdminPage() {
     )
   }
 
+  if (!user || user.tipo !== "dueno") {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">RC</span>
+            </div>
+            <span className="text-xl font-bold">Panel de Dueño</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">{user.nombre}</span>
+            <Link href="/">
+              <Button variant="outline" size="sm">
+                Cerrar Sesión
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Dueño</h1>
-          <p className="text-gray-600">Gestiona tus canchas, reservas y horarios desde un solo lugar</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Panel de Administración</h1>
+          <p className="text-gray-600">Gestiona tu establecimiento, canchas, reservas y horarios</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -67,7 +87,7 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{canchasDelDueno.length}</div>
-              <p className="text-xs text-muted-foreground">Establecimientos registrados</p>
+              <p className="text-xs text-muted-foreground">Canchas registradas</p>
             </CardContent>
           </Card>
 
@@ -105,13 +125,18 @@ export default function AdminPage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="canchas" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="establecimiento" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="establecimiento">Establecimiento</TabsTrigger>
             <TabsTrigger value="canchas">Mis Canchas</TabsTrigger>
             <TabsTrigger value="calendario">Calendario</TabsTrigger>
             <TabsTrigger value="reservas">Reservas</TabsTrigger>
             <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="establecimiento" className="space-y-4">
+            <EstablecimientoManager userId={user.id} />
+          </TabsContent>
 
           <TabsContent value="canchas" className="space-y-4">
             <CanchasManager canchas={canchasDelDueno} onCanchasChange={setCanchasDelDueno} />

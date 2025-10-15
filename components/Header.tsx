@@ -16,7 +16,7 @@ import Link from "next/link"
 
 export function Header() {
   const { abrirLogin } = useReserva()
-  const { user, logout } = useAuth()
+  const { user, logout, hasRole, canAccess } = useAuth()
 
   const getInitials = (nombre: string) => {
     return nombre
@@ -68,13 +68,17 @@ export function Header() {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/mis-reservas" className="flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Mis Reservas
-                </Link>
-              </DropdownMenuItem>
-              {user.tipo === "dueno" && (
+
+              {canAccess("/mis-reservas") && (
+                <DropdownMenuItem asChild>
+                  <Link href="/mis-reservas" className="flex items-center">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Mis Reservas
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
+              {hasRole("dueno") && canAccess("/admin") && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin" className="flex items-center">
                     <Settings className="mr-2 h-4 w-4" />
@@ -82,12 +86,16 @@ export function Header() {
                   </Link>
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  Mi Perfil
-                </Link>
-              </DropdownMenuItem>
+
+              {canAccess("/dashboard") && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center">
+                    <User className="mr-2 h-4 w-4" />
+                    Mi Perfil
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />

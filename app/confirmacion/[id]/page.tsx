@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle, Calendar, Clock, MapPin, Phone, CreditCard, Download, Share2 } from "lucide-react"
+import { CheckCircle, Calendar, Clock, MapPin, Phone, CreditCard, Download, Share2, AlertTriangle } from "lucide-react"
 import { formatearPrecio } from "@/utils/formatters"
 import type { Reserva } from "@/types"
 import Link from "next/link"
@@ -13,19 +14,33 @@ import Link from "next/link"
 export default function ConfirmacionPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const [reserva, setReserva] = useState<Reserva | null>(null)
   const [loading, setLoading] = useState(true)
+  const [accessDenied, setAccessDenied] = useState(false)
 
   useEffect(() => {
     const reservaId = params.id as string
+
+    if (!user) {
+      setAccessDenied(true)
+      setLoading(false)
+      return
+    }
+
     const reservasGuardadas = JSON.parse(localStorage.getItem("reservas") || "[]")
     const reservaEncontrada = reservasGuardadas.find((r: Reserva) => r.id === reservaId)
 
     if (reservaEncontrada) {
+      if (reservaEncontrada.userId && reservaEncontrada.userId !== user.id) {
+        setAccessDenied(true)
+        setLoading(false)
+        return
+      }
       setReserva(reservaEncontrada)
     }
     setLoading(false)
-  }, [params.id])
+  }, [params.id, user])
 
   if (loading) {
     return (
@@ -33,6 +48,23 @@ export default function ConfirmacionPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p>Cargando confirmación...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-4">Acceso Denegado</h1>
+          <p className="text-gray-600 mb-4">
+            {!user ? "Debes iniciar sesión para ver esta reserva" : "No tienes permisos para ver esta reserva"}
+          </p>
+          <Link href={!user ? "/login" : "/"}>
+            <Button className="bg-green-600 hover:bg-green-700">{!user ? "Iniciar Sesión" : "Volver al Inicio"}</Button>
+          </Link>
         </div>
       </div>
     )

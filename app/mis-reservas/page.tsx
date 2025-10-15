@@ -5,60 +5,94 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, MapPin, Clock, Phone, CreditCard } from "lucide-react"
+import { Calendar, MapPin, Clock, Phone, CreditCard, AlertTriangle, XCircle } from "lucide-react"
 import Link from "next/link"
-
-const RESERVAS_DEMO = {
-  "user-1": [
-    {
-      id: "res-1",
-      establecimiento: "Complejo Deportivo San Martín",
-      cancha: "Cancha de Fútbol 7",
-      zona: "Zona A",
-      fecha: "2024-01-15",
-      horarios: ["18:00", "19:00"],
-      precio: 160,
-      estado: "confirmada",
-      direccion: "Av. San Martín 123, San Miguel",
-      telefono: "+51 987 654 321",
-    },
-  ],
-  "admin-1": [
-    {
-      id: "res-2",
-      establecimiento: "Centro Deportivo Los Olivos",
-      cancha: "Cancha de Básquet",
-      zona: "Zona Premium",
-      fecha: "2024-01-20",
-      horarios: ["20:00", "21:00"],
-      precio: 200,
-      estado: "pendiente",
-      direccion: "Jr. Los Olivos 456, Los Olivos",
-      telefono: "+51 987 654 322",
-    },
-  ],
-}
+import { useEffect, useState } from "react"
+import type { Reserva } from "@/types"
 
 export default function MisReservasPage() {
-  const { user } = useAuth()
+  const { user, canAccess, isLoading } = useAuth()
+  const [reservasUsuario, setReservasUsuario] = useState<Reserva[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      if (!canAccess("/mis-reservas")) {
+        setLoading(false)
+        return
+      }
+
+      const todasLasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
+      const reservasFiltradas = todasLasReservas.filter((reserva: Reserva) => reserva.userId === user.id)
+
+      setReservasUsuario(reservasFiltradas)
+      setLoading(false)
+    }
+  }, [user, canAccess, isLoading])
+
+  const cancelarReserva = (reservaId: string) => {
+    if (!confirm("¿Estás seguro de que deseas cancelar esta reserva?")) return
+
+    const todasLasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
+    const reservasActualizadas = todasLasReservas.map((r: Reserva) =>
+      r.id === reservaId ? { ...r, estado: "cancelada" as const } : r,
+    )
+    localStorage.setItem("reservas", JSON.stringify(reservasActualizadas))
+
+    // Actualizar estado local
+    setReservasUsuario(reservasActualizadas.filter((r: Reserva) => r.userId === user?.id))
+  }
+
+  if (isLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p>Cargando tus reservas...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-4">Acceso Denegado</h1>
           <p className="text-gray-600 mb-4">Debes iniciar sesión para ver tus reservas</p>
-          <Link href="/">
-            <Button className="bg-green-600 hover:bg-green-700">Volver al Inicio</Button>
+          <Link href="/login">
+            <Button className="bg-green-600 hover:bg-green-700">Iniciar Sesión</Button>
           </Link>
         </div>
       </div>
     )
   }
 
-  const reservasUsuario = RESERVAS_DEMO[user.id as keyof typeof RESERVAS_DEMO] || []
-  const reservasProximas = reservasUsuario.filter((r) => new Date(r.fecha) >= new Date())
-  const reservasHistorial = reservasUsuario.filter((r) => new Date(r.fecha) < new Date())
+  if (!canAccess("/mis-reservas")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-4">Acceso No Autorizado</h1>
+          <p className="text-gray-600 mb-4">No tienes permisos para acceder a esta sección</p>
+          <Link href={user.role === "dueno" ? "/admin" : "/"}>
+            <Button className="bg-green-600 hover:bg-green-700">
+              {user.role === "dueno" ? "Ir al Panel de Dueño" : "Volver al Inicio"}
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const reservasProximas = reservasUsuario.filter((r) => new Date(r.fecha) >= new Date() && r.estado !== "cancelada")
+  const reservasHistorial = reservasUsuario.filter((r) => new Date(r.fecha) < new Date() || r.estado === "cancelada")
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -68,12 +102,14 @@ export default function MisReservasPage() {
         return <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
       case "cancelada":
         return <Badge className="bg-red-100 text-red-800">Cancelada</Badge>
+      case "completada":
+        return <Badge className="bg-blue-100 text-blue-800">Completada</Badge>
       default:
         return <Badge variant="secondary">{estado}</Badge>
     }
   }
 
-  const ReservaCard = ({ reserva }: { reserva: any }) => (
+  const ReservaCard = ({ reserva }: { reserva: Reserva }) => (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -108,14 +144,23 @@ export default function MisReservasPage() {
           <Phone className="mr-2 h-4 w-4" />
           {reserva.telefono}
         </div>
-        <div className="flex items-center text-sm font-medium">
-          <CreditCard className="mr-2 h-4 w-4" />
-          S/ {reserva.precio}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm font-medium">
+            <CreditCard className="mr-2 h-4 w-4" />
+            S/ {reserva.precio}
+          </div>
+          <div className="text-xs text-gray-500">ID: {reserva.id}</div>
         </div>
 
         {reserva.estado === "confirmada" && new Date(reserva.fecha) >= new Date() && (
           <div className="pt-2">
-            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => cancelarReserva(reserva.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <XCircle className="mr-2 h-4 w-4" />
               Cancelar Reserva
             </Button>
           </div>
@@ -148,6 +193,7 @@ export default function MisReservasPage() {
             ) : (
               <Card>
                 <CardContent className="text-center py-8">
+                  <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-gray-500 mb-4">No tienes reservas próximas</p>
                   <Link href="/">
                     <Button className="bg-green-600 hover:bg-green-700">Hacer una Reserva</Button>
@@ -167,6 +213,7 @@ export default function MisReservasPage() {
             ) : (
               <Card>
                 <CardContent className="text-center py-8">
+                  <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-gray-500">No tienes reservas en el historial</p>
                 </CardContent>
               </Card>

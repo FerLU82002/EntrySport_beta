@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useReserva } from "@/hooks/useReserva"
-import { horariosDisponibles } from "@/data/canchas"
+import { horariosDisponibles, horariosConEstado, type EstadoHorario } from "@/data/canchas"
 import { formatearPrecio } from "@/utils/formatters"
 
 export function DetallesModal() {
@@ -27,6 +27,53 @@ export function DetallesModal() {
   } = useReserva()
 
   if (!reserva.selectedCancha) return null
+
+  const getEstadoHorario = (horario: string): EstadoHorario => {
+    if (!reserva.selectedCancha || !reserva.selectedZona) return "disponible"
+
+    const fechaKey = reserva.selectedDate.toISOString().split("T")[0]
+    const estadosCancha = horariosConEstado[reserva.selectedCancha.id]
+
+    if (!estadosCancha) return "disponible"
+
+    const estadosZona = estadosCancha[reserva.selectedZona.id]
+    if (!estadosZona) return "disponible"
+
+    const estadosFecha = estadosZona[fechaKey]
+    if (!estadosFecha) return "disponible"
+
+    return estadosFecha[horario] || "disponible"
+  }
+
+  const getEstadoColor = (estado: EstadoHorario) => {
+    switch (estado) {
+      case "disponible":
+        return "bg-green-100 text-green-700 border-green-300"
+      case "reservado":
+        return "bg-red-100 text-red-700 border-red-300"
+      case "mantenimiento":
+        return "bg-yellow-100 text-yellow-700 border-yellow-300"
+      case "bloqueado":
+        return "bg-gray-100 text-gray-700 border-gray-300"
+      default:
+        return "bg-gray-100 text-gray-700 border-gray-300"
+    }
+  }
+
+  const getEstadoTexto = (estado: EstadoHorario) => {
+    switch (estado) {
+      case "disponible":
+        return "Disponible"
+      case "reservado":
+        return "Reservado"
+      case "mantenimiento":
+        return "Mantenimiento"
+      case "bloqueado":
+        return "Bloqueado"
+      default:
+        return "Disponible"
+    }
+  }
 
   return (
     <Dialog open={reserva.isDetailsOpen} onOpenChange={cerrarDetalles}>
@@ -204,33 +251,71 @@ export function DetallesModal() {
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        Horarios disponibles - {reserva.selectedDate.toLocaleDateString()}
-                      </Label>
-                      <ScrollArea className="h-48 border rounded-md p-2">
-                        <div className="grid grid-cols-3 gap-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium">
+                          Horarios - {reserva.selectedDate.toLocaleDateString()}
+                        </Label>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 mb-3 p-2 bg-white rounded-lg border">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <span className="text-xs text-gray-600">Disponible</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                          <span className="text-xs text-gray-600">Reservado</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                          <span className="text-xs text-gray-600">Mantenimiento</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                          <span className="text-xs text-gray-600">Bloqueado</span>
+                        </div>
+                      </div>
+
+                      <ScrollArea className="h-64 border rounded-md p-3 bg-white">
+                        <div className="grid grid-cols-2 gap-2">
                           {horariosDisponibles.map((horario) => {
-                            const disponible = esHorarioDisponible(horario)
+                            const estado = getEstadoHorario(horario)
+                            const disponible = estado === "disponible"
                             const seleccionado = reserva.selectedHorarios.includes(horario)
 
                             return (
-                              <Button
-                                key={horario}
-                                variant={seleccionado ? "default" : disponible ? "outline" : "secondary"}
-                                size="sm"
-                                disabled={!disponible}
-                                onClick={() => toggleHorario(horario)}
-                                className={`text-xs ${
-                                  seleccionado
-                                    ? "bg-green-600 hover:bg-green-700"
-                                    : disponible
-                                      ? "hover:bg-green-50"
-                                      : "opacity-50 cursor-not-allowed"
-                                }`}
-                              >
-                                {horario}
-                                {!disponible && <XCircle className="h-3 w-3 ml-1" />}
-                              </Button>
+                              <div key={horario} className="relative">
+                                <Button
+                                  variant={seleccionado ? "default" : disponible ? "outline" : "secondary"}
+                                  size="sm"
+                                  disabled={!disponible}
+                                  onClick={() => disponible && toggleHorario(horario)}
+                                  className={`w-full text-xs font-medium ${
+                                    seleccionado
+                                      ? "bg-green-600 hover:bg-green-700 text-white"
+                                      : disponible
+                                        ? "hover:bg-green-50 hover:border-green-300"
+                                        : "opacity-60 cursor-not-allowed"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{horario}</span>
+                                    {!seleccionado && (
+                                      <span
+                                        className={`ml-2 w-2 h-2 rounded-full ${
+                                          estado === "disponible"
+                                            ? "bg-green-500"
+                                            : estado === "reservado"
+                                              ? "bg-red-500"
+                                              : estado === "mantenimiento"
+                                                ? "bg-yellow-500"
+                                                : "bg-gray-500"
+                                        }`}
+                                      ></span>
+                                    )}
+                                  </div>
+                                </Button>
+                              </div>
                             )
                           })}
                         </div>
