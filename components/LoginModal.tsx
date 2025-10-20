@@ -33,7 +33,7 @@ export function LoginModal() {
       cerrarLogin()
     } else {
       setError(
-        "Credenciales inválidas. Usa: usuario@gmail.com o admin@gmail.com con cualquier contraseña de 6+ caracteres",
+        "Credenciales inválidas. Verifica tu email y contraseña.",
       )
     }
   }
@@ -65,13 +65,6 @@ export function LoginModal() {
           <DialogDescription>Inicia sesión para reservar canchas en toda la ciudad</DialogDescription>
         </DialogHeader>
 
-        <div className="bg-blue-50 p-3 rounded-lg text-sm">
-          <p className="font-medium text-blue-800 mb-1">Credenciales Demo:</p>
-          <p className="text-blue-700">• usuario@gmail.com (Usuario General)</p>
-          <p className="text-blue-700">• admin@gmail.com (Dueño de Cancha)</p>
-          <p className="text-blue-700">• Contraseña: cualquier texto de 6+ caracteres</p>
-        </div>
-
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
@@ -85,18 +78,26 @@ export function LoginModal() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="usuario@gmail.com"
+                  placeholder="tu@email.com"
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <a 
+                    href="/auth/forgot-password" 
+                    className="text-xs text-green-600 hover:text-green-500 font-medium"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
+                </div>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="demo123"
+                  placeholder="Ingresa tu contraseña"
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   required

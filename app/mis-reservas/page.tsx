@@ -1,59 +1,77 @@
 "use client"
 
 import { useAuth } from "@/hooks/useAuth"
+import { useReservas } from "@/hooks/useReservas"
+import { AppProvider } from "@/contexts/AppContext"
+import { Header } from "@/components/Header"
+import { Footer } from "@/components/Footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, Clock, Phone, CreditCard, AlertTriangle, XCircle } from "lucide-react"
+import { parsearFechaLocal } from "@/utils/formatters"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import type { Reserva } from "@/types"
 
-export default function MisReservasPage() {
+function MisReservasContent() {
   const { user, canAccess, isLoading } = useAuth()
-  const [reservasUsuario, setReservasUsuario] = useState<Reserva[]>([])
+  const { reservas: reservasUsuario, fetchMisReservas, cancelarReserva: cancelarReservaHook, isLoading: loadingReservas } = useReservas()
   const [loading, setLoading] = useState(true)
+  
+  // Detectar si estamos en proceso de logout
+  const isLoggingOut = typeof window !== "undefined" && sessionStorage.getItem("logging-out") === "true"
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        setLoading(false)
+    const cargarReservas = async () => {
+      // Si estamos cerrando sesión, no hacer nada
+      if (isLoggingOut) {
         return
       }
+      
+      if (!isLoading) {
+        if (!user) {
+          setLoading(false)
+          return
+        }
 
-      if (!canAccess("/mis-reservas")) {
+        if (!canAccess("/mis-reservas")) {
+          setLoading(false)
+          return
+        }
+
+        // Cargar reservas desde Supabase
+        await fetchMisReservas(user.id)
         setLoading(false)
-        return
       }
-
-      const todasLasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
-      const reservasFiltradas = todasLasReservas.filter((reserva: Reserva) => reserva.userId === user.id)
-
-      setReservasUsuario(reservasFiltradas)
-      setLoading(false)
     }
-  }, [user, canAccess, isLoading])
 
-  const cancelarReserva = (reservaId: string) => {
+    cargarReservas()
+  }, [user, canAccess, isLoading, fetchMisReservas, isLoggingOut])
+
+  const handleCancelarReserva = async (reservaId: string) => {
     if (!confirm("¿Estás seguro de que deseas cancelar esta reserva?")) return
 
-    const todasLasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
-    const reservasActualizadas = todasLasReservas.map((r: Reserva) =>
-      r.id === reservaId ? { ...r, estado: "cancelada" as const } : r,
-    )
-    localStorage.setItem("reservas", JSON.stringify(reservasActualizadas))
-
-    // Actualizar estado local
-    setReservasUsuario(reservasActualizadas.filter((r: Reserva) => r.userId === user?.id))
+    try {
+      await cancelarReservaHook(reservaId)
+      
+      // Recargar las reservas
+      if (user) {
+        await fetchMisReservas(user.id)
+      }
+    } catch (error) {
+      console.error("Error al cancelar reserva:", error)
+      alert("Hubo un error al cancelar la reserva. Por favor intenta nuevamente.")
+    }
   }
 
-  if (isLoading || loading) {
+  if (isLoading || loading || isLoggingOut) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p>Cargando tus reservas...</p>
+          <p>{isLoggingOut ? "Cerrando sesión..." : "Cargando tus reservas..."}</p>
         </div>
       </div>
     )
@@ -91,8 +109,19 @@ export default function MisReservasPage() {
     )
   }
 
-  const reservasProximas = reservasUsuario.filter((r) => new Date(r.fecha) >= new Date() && r.estado !== "cancelada")
-  const reservasHistorial = reservasUsuario.filter((r) => new Date(r.fecha) < new Date() || r.estado === "cancelada")
+  const reservasProximas = reservasUsuario.filter((r) => {
+    const fechaReserva = parsearFechaLocal(r.fecha)
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    return fechaReserva >= hoy && r.estado !== "cancelada"
+  })
+  
+  const reservasHistorial = reservasUsuario.filter((r) => {
+    const fechaReserva = parsearFechaLocal(r.fecha)
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    return fechaReserva < hoy || r.estado === "cancelada"
+  })
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -123,9 +152,20 @@ export default function MisReservasPage() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Código de verificación para reservas activas */}
+        {reserva.estado !== "cancelada" && reserva.estado !== "completada" && (
+          <div className="bg-green-50 border-2 border-green-300 rounded-lg p-3 text-center">
+            <p className="text-xs font-medium text-green-800 mb-1">Tu Código de Verificación</p>
+            <p className="text-3xl font-bold text-green-700 tracking-wider font-mono">
+              {reserva.codigoVerificacion || "------"}
+            </p>
+            <p className="text-xs text-green-600 mt-1">Presentar en la entrada</p>
+          </div>
+        )}
+
         <div className="flex items-center text-sm text-gray-600">
           <Calendar className="mr-2 h-4 w-4" />
-          {new Date(reserva.fecha).toLocaleDateString("es-PE", {
+          {parsearFechaLocal(reserva.fecha).toLocaleDateString("es-PE", {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -157,7 +197,7 @@ export default function MisReservasPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => cancelarReserva(reserva.id)}
+              onClick={() => handleCancelarReserva(reserva.id)}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <XCircle className="mr-2 h-4 w-4" />
@@ -170,8 +210,10 @@ export default function MisReservasPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header />
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Reservas</h1>
           <p className="text-gray-600">Gestiona todas tus reservas de canchas deportivas</p>
@@ -220,7 +262,17 @@ export default function MisReservasPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </main>
+      <Footer />
     </div>
+  )
+}
+
+export default function MisReservasPage() {
+  return (
+    <AppProvider>
+      <MisReservasContent />
+    </AppProvider>
   )
 }

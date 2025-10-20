@@ -1,12 +1,15 @@
 "use client"
 
 import { useAuth } from "@/hooks/useAuth"
+import { AppProvider } from "@/contexts/AppContext"
+import { Header } from "@/components/Header"
+import { Footer } from "@/components/Footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { User, Mail, Phone, Calendar, MapPin } from "lucide-react"
 import Link from "next/link"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useAuth()
 
   if (!user) {
@@ -24,12 +27,14 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido, {user.nombre}</h1>
-          <p className="text-gray-600">Gestiona tu perfil y reservas desde tu dashboard personal</p>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header />
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido, {user.nombre}</h1>
+            <p className="text-gray-600">Gestiona tu perfil y reservas desde tu dashboard personal</p>
+          </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
@@ -87,7 +92,17 @@ export default function DashboardPage() {
             </Card>
           )}
         </div>
-      </div>
+        </div>
+      </main>
+      <Footer />
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <AppProvider>
+      <DashboardContent />
+    </AppProvider>
   )
 }

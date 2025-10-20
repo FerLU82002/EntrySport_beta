@@ -7,48 +7,72 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, Clock, Phone, User, CreditCard, CheckCircle, XCircle } from "lucide-react"
-import { formatearPrecio } from "@/utils/formatters"
-import type { Cancha, Reserva } from "@/types"
+import { formatearPrecio, parsearFechaLocal, formatearFechaLocal } from "@/utils/formatters"
+import { useReservas } from "@/hooks/useReservas"
+import { useZonas } from "@/hooks/useZonas"
+import { useAuth } from "@/hooks/useAuth"
+import type { Cancha, Reserva, Zona } from "@/types"
 
 interface ReservasManagerProps {
   canchas: Cancha[]
 }
 
 export function ReservasManager({ canchas }: ReservasManagerProps) {
-  const [reservas, setReservas] = useState<Reserva[]>([])
-  const [filtroCancha, setFiltroCancha] = useState<string>("todas")
+  const { user } = useAuth()
+  const { reservas, fetchReservasDeZonas, actualizarEstadoReserva, isLoading } = useReservas()
+  const { zonas: zonasDelDueno, fetchMisZonas } = useZonas()
+  const [filtroZona, setFiltroZona] = useState<string>("todas")
   const [filtroEstado, setFiltroEstado] = useState<string>("todas")
 
   useEffect(() => {
-    const todasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
+    const cargarDatos = async () => {
+      if (!user) return
 
-    const canchasIds = canchas.map((c) => c.id)
-    const reservasDelDueno = todasReservas.filter((r: Reserva) => canchasIds.includes(r.canchaId))
+      // Cargar zonas del dueño
+      await fetchMisZonas(user.id)
+      
+      // Cargar reservas de las zonas del dueño
+      await fetchReservasDeZonas(user.id)
+    }
 
-    setReservas(reservasDelDueno)
-  }, [canchas])
+    cargarDatos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]) // Solo depender del user.id
 
   const reservasFiltradas = reservas.filter((reserva) => {
-    const cumpleCancha = filtroCancha === "todas" || reserva.canchaId.toString() === filtroCancha
+    const cumpleZona = filtroZona === "todas" || reserva.zonaId === filtroZona
     const cumpleEstado = filtroEstado === "todas" || reserva.estado === filtroEstado
-    return cumpleCancha && cumpleEstado
+    return cumpleZona && cumpleEstado
   })
 
-  const reservasHoy = reservasFiltradas.filter((r) => r.fecha === new Date().toISOString().split("T")[0])
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const fechaHoyStr = formatearFechaLocal(hoy)
 
-  const reservasProximas = reservasFiltradas.filter((r) => new Date(r.fecha) > new Date())
+  const reservasHoy = reservasFiltradas.filter((r) => r.fecha === fechaHoyStr)
 
-  const reservasHistorial = reservasFiltradas.filter((r) => new Date(r.fecha) <= new Date())
+  const reservasProximas = reservasFiltradas.filter((r) => {
+    const fechaReserva = parsearFechaLocal(r.fecha)
+    return fechaReserva > hoy
+  })
 
-  const cambiarEstadoReserva = (reservaId: string, nuevoEstado: "confirmada" | "cancelada") => {
-    const nuevasReservas = reservas.map((r) => (r.id === reservaId ? { ...r, estado: nuevoEstado } : r))
-    setReservas(nuevasReservas)
+  const reservasHistorial = reservasFiltradas.filter((r) => {
+    const fechaReserva = parsearFechaLocal(r.fecha)
+    return fechaReserva < hoy
+  })
 
-    const todasReservas = JSON.parse(localStorage.getItem("reservas") || "[]")
-    const reservasActualizadas = todasReservas.map((r: Reserva) =>
-      r.id === reservaId ? { ...r, estado: nuevoEstado } : r,
-    )
-    localStorage.setItem("reservas", JSON.stringify(reservasActualizadas))
+  const cambiarEstadoReserva = async (reservaId: string, nuevoEstado: "confirmada" | "cancelada" | "completada" | "pendiente") => {
+    try {
+      await actualizarEstadoReserva(reservaId, nuevoEstado)
+      
+      // Recargar reservas
+      if (user) {
+        await fetchReservasDeZonas(user.id)
+      }
+    } catch (error) {
+      console.error("Error al cambiar estado de reserva:", error)
+      alert("Hubo un error al cambiar el estado. Por favor intenta nuevamente.")
+    }
   }
 
   const getEstadoBadge = (estado: string) => {
@@ -80,10 +104,38 @@ export function ReservasManager({ canchas }: ReservasManagerProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Datos del cliente */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="font-semibold text-sm text-blue-900 mb-2">Datos del Cliente</p>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center text-sm">
+              <User className="mr-2 h-4 w-4 text-blue-600" />
+              <span className="font-medium">{reserva.usuarioNombre}</span>
+            </div>
+            <div className="flex items-center text-sm text-gray-700">
+              <span className="mr-2">📧</span>
+              <span>{reserva.usuarioEmail}</span>
+            </div>
+            <div className="flex items-center text-sm text-gray-700">
+              <Phone className="mr-2 h-4 w-4 text-blue-600" />
+              <span>{reserva.usuarioTelefono}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Código de verificación */}
+        <div className="bg-green-50 border-2 border-green-300 rounded-lg p-3 text-center">
+          <p className="text-xs font-medium text-green-800 mb-1">Código de Verificación</p>
+          <p className="text-3xl font-bold text-green-700 tracking-wider font-mono">
+            {reserva.codigoVerificacion || "------"}
+          </p>
+          <p className="text-xs text-green-600 mt-1">Solicitar al cliente en la entrada</p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="flex items-center text-sm text-gray-600">
             <Calendar className="mr-2 h-4 w-4" />
-            {new Date(reserva.fecha).toLocaleDateString("es-PE", {
+            {parsearFechaLocal(reserva.fecha).toLocaleDateString("es-PE", {
               weekday: "long",
               year: "numeric",
               month: "long",
@@ -94,14 +146,6 @@ export function ReservasManager({ canchas }: ReservasManagerProps) {
             <Clock className="mr-2 h-4 w-4" />
             {reserva.horarios.join(", ")}
           </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <User className="mr-2 h-4 w-4" />
-            Usuario ID: {reserva.userId}
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <Phone className="mr-2 h-4 w-4" />
-            {reserva.telefono}
-          </div>
         </div>
 
         <div className="flex items-center justify-between">
@@ -109,11 +153,11 @@ export function ReservasManager({ canchas }: ReservasManagerProps) {
             <CreditCard className="mr-2 h-4 w-4" />
             {formatearPrecio(reserva.precio)} - {reserva.metodoPago}
           </div>
-          <div className="text-xs text-gray-500">ID: {reserva.id}</div>
+          <div className="text-xs text-gray-500">ID: {reserva.id.slice(0, 12)}...</div>
         </div>
 
         {reserva.estado === "pendiente" && (
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 border-t">
             <Button
               size="sm"
               onClick={() => cambiarEstadoReserva(reserva.id, "confirmada")}
@@ -133,6 +177,45 @@ export function ReservasManager({ canchas }: ReservasManagerProps) {
             </Button>
           </div>
         )}
+
+        {/* Controles de administrador - siempre visibles */}
+        <div className="pt-2 border-t">
+          <p className="text-xs font-medium mb-2 text-gray-600">Cambiar Estado:</p>
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              variant={reserva.estado === "pendiente" ? "default" : "outline"}
+              size="sm"
+              onClick={() => cambiarEstadoReserva(reserva.id, "pendiente")}
+              className={`text-xs ${reserva.estado === "pendiente" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
+            >
+              Pendiente
+            </Button>
+            <Button
+              variant={reserva.estado === "confirmada" ? "default" : "outline"}
+              size="sm"
+              onClick={() => cambiarEstadoReserva(reserva.id, "confirmada")}
+              className={`text-xs ${reserva.estado === "confirmada" ? "bg-green-600 hover:bg-green-700" : ""}`}
+            >
+              Confirmada
+            </Button>
+            <Button
+              variant={reserva.estado === "completada" ? "default" : "outline"}
+              size="sm"
+              onClick={() => cambiarEstadoReserva(reserva.id, "completada")}
+              className={`text-xs ${reserva.estado === "completada" ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+            >
+              Completada
+            </Button>
+            <Button
+              variant={reserva.estado === "cancelada" ? "default" : "outline"}
+              size="sm"
+              onClick={() => cambiarEstadoReserva(reserva.id, "cancelada")}
+              className={`text-xs ${reserva.estado === "cancelada" ? "bg-red-600 hover:bg-red-700" : ""}`}
+            >
+              Cancelada
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -145,15 +228,15 @@ export function ReservasManager({ canchas }: ReservasManagerProps) {
       </div>
 
       <div className="flex gap-4">
-        <Select value={filtroCancha} onValueChange={setFiltroCancha}>
+        <Select value={filtroZona} onValueChange={setFiltroZona}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrar por cancha" />
+            <SelectValue placeholder="Filtrar por zona" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todas">Todas las canchas</SelectItem>
-            {canchas.map((cancha) => (
-              <SelectItem key={cancha.id} value={cancha.id.toString()}>
-                {cancha.nombre}
+            <SelectItem value="todas">Todas las zonas</SelectItem>
+            {zonasDelDueno.map((zona) => (
+              <SelectItem key={zona.id} value={zona.id}>
+                {zona.nombre} - {zona.tipo}
               </SelectItem>
             ))}
           </SelectContent>

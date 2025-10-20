@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
+import { createClient } from "@/lib/supabase/client"
+import { AppProvider } from "@/contexts/AppContext"
+import { Header } from "@/components/Header"
+import { Footer } from "@/components/Footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +15,7 @@ import { formatearPrecio } from "@/utils/formatters"
 import type { Reserva } from "@/types"
 import Link from "next/link"
 
-export default function ConfirmacionPage() {
+function ConfirmacionContent() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
@@ -20,26 +24,72 @@ export default function ConfirmacionPage() {
   const [accessDenied, setAccessDenied] = useState(false)
 
   useEffect(() => {
-    const reservaId = params.id as string
+    const cargarReserva = async () => {
+      const reservaId = params.id as string
 
-    if (!user) {
-      setAccessDenied(true)
-      setLoading(false)
-      return
-    }
-
-    const reservasGuardadas = JSON.parse(localStorage.getItem("reservas") || "[]")
-    const reservaEncontrada = reservasGuardadas.find((r: Reserva) => r.id === reservaId)
-
-    if (reservaEncontrada) {
-      if (reservaEncontrada.userId && reservaEncontrada.userId !== user.id) {
+      if (!user) {
         setAccessDenied(true)
         setLoading(false)
         return
       }
-      setReserva(reservaEncontrada)
+
+      try {
+        const supabase = createClient()
+        
+        // Buscar la reserva en Supabase
+        const { data: reservaData, error } = await supabase
+          .from('reservas')
+          .select('*')
+          .eq('id', reservaId)
+          .single()
+
+        if (error || !reservaData) {
+          console.error('Error al cargar reserva:', error)
+          setReserva(null)
+          setLoading(false)
+          return
+        }
+
+        // Verificar que la reserva pertenece al usuario
+        if (reservaData.user_id !== user.id) {
+          setAccessDenied(true)
+          setLoading(false)
+          return
+        }
+
+        // Formatear la reserva
+        const reservaFormateada: Reserva = {
+          id: reservaData.id,
+          userId: reservaData.user_id,
+          usuarioNombre: reservaData.usuario_nombre,
+          usuarioEmail: reservaData.usuario_email,
+          usuarioTelefono: reservaData.usuario_telefono,
+          canchaId: reservaData.cancha_id || 0,
+          zonaId: reservaData.zona_id,
+          fecha: reservaData.fecha,
+          horarios: reservaData.horarios,
+          precio: Number(reservaData.precio),
+          estado: reservaData.estado,
+          fechaCreacion: reservaData.fecha_creacion,
+          metodoPago: reservaData.metodo_pago,
+          establecimiento: reservaData.establecimiento,
+          cancha: reservaData.cancha,
+          zona: reservaData.zona,
+          direccion: reservaData.direccion,
+          telefono: reservaData.telefono,
+          codigoVerificacion: reservaData.codigo_verificacion,
+        }
+
+        setReserva(reservaFormateada)
+      } catch (err) {
+        console.error('Error inesperado:', err)
+        setReserva(null)
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)
+
+    cargarReserva()
   }, [params.id, user])
 
   if (loading) {
@@ -96,15 +146,17 @@ export default function ConfirmacionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header />
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Reserva Confirmada!</h1>
+            <p className="text-gray-600">Tu reserva ha sido procesada exitosamente</p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Reserva Confirmada!</h1>
-          <p className="text-gray-600">Tu reserva ha sido procesada exitosamente</p>
-        </div>
 
         <div className="max-w-2xl mx-auto space-y-6">
           <Card>
@@ -206,7 +258,17 @@ export default function ConfirmacionPage() {
             </Link>
           </div>
         </div>
-      </div>
+        </div>
+      </main>
+      <Footer />
     </div>
+  )
+}
+
+export default function ConfirmacionPage() {
+  return (
+    <AppProvider>
+      <ConfirmacionContent />
+    </AppProvider>
   )
 }

@@ -31,21 +31,32 @@ export function Header() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">RC</span>
+            <span className="text-white font-bold text-sm">ES</span>
           </div>
-          <span className="text-xl font-bold text-gray-900">ReservaCanchas</span>
+          <span className="text-xl font-bold text-gray-900">EntrySport</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6">
-          <a href="#canchas" className="text-gray-600 hover:text-green-600 transition-colors">
+          <Link href="/#canchas" className="text-gray-600 hover:text-green-600 transition-colors">
             Canchas
-          </a>
-          <a href="#como-funciona" className="text-gray-600 hover:text-green-600 transition-colors">
-            Cómo funciona
-          </a>
-          <a href="#contacto" className="text-gray-600 hover:text-green-600 transition-colors">
-            Contacto
-          </a>
+          </Link>
+          
+          {user ? (
+            // Navegación para usuarios logueados
+            <Link href="/mis-reservas" className="text-gray-600 hover:text-green-600 transition-colors">
+              Mis Reservas
+            </Link>
+          ) : (
+            // Navegación para usuarios no logueados
+            <>
+              <Link href="/#como-funciona" className="text-gray-600 hover:text-green-600 transition-colors">
+                Cómo funciona
+              </Link>
+              <Link href="/#contacto" className="text-gray-600 hover:text-green-600 transition-colors">
+                Contacto
+              </Link>
+            </>
+          )}
         </nav>
 
         {user ? (

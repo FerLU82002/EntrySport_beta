@@ -1,123 +1,150 @@
--- Políticas RLS para profiles
-create policy "Users can view their own profile"
-  on public.profiles for select
-  using (auth.uid() = id);
+-- ============================================
+-- SCRIPT 002: Políticas de Seguridad RLS
+-- Row Level Security Policies
+-- ============================================
 
-create policy "Users can update their own profile"
-  on public.profiles for update
-  using (auth.uid() = id);
+-- ============================================
+-- POLÍTICAS PARA PROFILES
+-- ============================================
 
--- Políticas RLS para establecimientos
-create policy "Anyone can view establecimientos"
-  on public.establecimientos for select
-  using (true);
+CREATE POLICY "Users can view their own profile"
+  ON public.profiles FOR SELECT
+  USING (auth.uid() = id);
 
-create policy "Owners can insert their own establecimientos"
-  on public.establecimientos for insert
-  with check (auth.uid() = owner_id);
+CREATE POLICY "Users can update their own profile"
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = id);
 
-create policy "Owners can update their own establecimientos"
-  on public.establecimientos for update
-  using (auth.uid() = owner_id);
+-- ============================================
+-- POLÍTICAS PARA ESTABLECIMIENTOS
+-- ============================================
 
-create policy "Owners can delete their own establecimientos"
-  on public.establecimientos for delete
-  using (auth.uid() = owner_id);
+CREATE POLICY "Anyone can view establecimientos"
+  ON public.establecimientos FOR SELECT
+  USING (true);
 
--- Políticas RLS para canchas
-create policy "Anyone can view canchas"
-  on public.canchas for select
-  using (true);
+CREATE POLICY "Owners can insert their own establecimientos"
+  ON public.establecimientos FOR INSERT
+  WITH CHECK (auth.uid() = owner_id);
 
-create policy "Owners can insert canchas for their establecimientos"
-  on public.canchas for insert
-  with check (
-    exists (
-      select 1 from public.establecimientos
-      where id = cancha_id and owner_id = auth.uid()
+CREATE POLICY "Owners can update their own establecimientos"
+  ON public.establecimientos FOR UPDATE
+  USING (auth.uid() = owner_id);
+
+CREATE POLICY "Owners can delete their own establecimientos"
+  ON public.establecimientos FOR DELETE
+  USING (auth.uid() = owner_id);
+
+-- ============================================
+-- POLÍTICAS PARA ZONAS
+-- ============================================
+
+CREATE POLICY "Anyone can view zonas"
+  ON public.zonas FOR SELECT
+  USING (true);
+
+CREATE POLICY "Owners can insert zonas for their establecimientos"
+  ON public.zonas FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.establecimientos
+      WHERE id = establecimiento_id AND owner_id = auth.uid()
     )
   );
 
-create policy "Owners can update their own canchas"
-  on public.canchas for update
-  using (
-    exists (
-      select 1 from public.establecimientos
-      where id = establecimiento_id and owner_id = auth.uid()
+CREATE POLICY "Owners can update their own zonas"
+  ON public.zonas FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.establecimientos
+      WHERE id = establecimiento_id AND owner_id = auth.uid()
     )
   );
 
-create policy "Owners can delete their own canchas"
-  on public.canchas for delete
-  using (
-    exists (
-      select 1 from public.establecimientos
-      where id = establecimiento_id and owner_id = auth.uid()
+CREATE POLICY "Owners can delete their own zonas"
+  ON public.zonas FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.establecimientos
+      WHERE id = establecimiento_id AND owner_id = auth.uid()
     )
   );
 
--- Políticas RLS para bloqueos
-create policy "Anyone can view bloqueos"
-  on public.bloqueos for select
-  using (true);
+-- ============================================
+-- POLÍTICAS PARA BLOQUEOS
+-- ============================================
 
-create policy "Owners can insert bloqueos for their canchas"
-  on public.bloqueos for insert
-  with check (
-    exists (
-      select 1 from public.canchas c
-      join public.establecimientos e on c.establecimiento_id = e.id
-      where c.id = cancha_id and e.owner_id = auth.uid()
+CREATE POLICY "Anyone can view bloqueos"
+  ON public.bloqueos FOR SELECT
+  USING (true);
+
+CREATE POLICY "Owners can insert bloqueos for their zonas"
+  ON public.bloqueos FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.zonas z
+      JOIN public.establecimientos e ON z.establecimiento_id = e.id
+      WHERE z.id = zona_id AND e.owner_id = auth.uid()
     )
   );
 
-create policy "Owners can update their own bloqueos"
-  on public.bloqueos for update
-  using (
-    exists (
-      select 1 from public.canchas c
-      join public.establecimientos e on c.establecimiento_id = e.id
-      where c.id = cancha_id and e.owner_id = auth.uid()
+CREATE POLICY "Owners can update their own bloqueos"
+  ON public.bloqueos FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.zonas z
+      JOIN public.establecimientos e ON z.establecimiento_id = e.id
+      WHERE z.id = zona_id AND e.owner_id = auth.uid()
     )
   );
 
-create policy "Owners can delete their own bloqueos"
-  on public.bloqueos for delete
-  using (
-    exists (
-      select 1 from public.canchas c
-      join public.establecimientos e on c.establecimiento_id = e.id
-      where c.id = cancha_id and e.owner_id = auth.uid()
+CREATE POLICY "Owners can delete their own bloqueos"
+  ON public.bloqueos FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.zonas z
+      JOIN public.establecimientos e ON z.establecimiento_id = e.id
+      WHERE z.id = zona_id AND e.owner_id = auth.uid()
     )
   );
 
--- Políticas RLS para reservas
-create policy "Users can view their own reservas"
-  on public.reservas for select
-  using (auth.uid() = user_id);
+-- ============================================
+-- POLÍTICAS PARA RESERVAS
+-- ============================================
 
-create policy "Owners can view reservas for their establecimientos"
-  on public.reservas for select
-  using (
-    exists (
-      select 1 from public.establecimientos
-      where id = establecimiento_id and owner_id = auth.uid()
+-- Usuarios pueden ver sus propias reservas
+CREATE POLICY "Users can view their own reservas"
+  ON public.reservas FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Dueños pueden ver reservas de sus zonas
+CREATE POLICY "Owners can view reservas for their zonas"
+  ON public.reservas FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.zonas z
+      JOIN public.establecimientos e ON z.establecimiento_id = e.id
+      WHERE z.id = zona_id AND e.owner_id = auth.uid()
     )
   );
 
-create policy "Users can insert their own reservas"
-  on public.reservas for insert
-  with check (auth.uid() = user_id);
+-- Usuarios pueden crear sus propias reservas
+CREATE POLICY "Users can insert their own reservas"
+  ON public.reservas FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
 
-create policy "Users can update their own reservas"
-  on public.reservas for update
-  using (auth.uid() = user_id);
+-- Usuarios pueden cancelar sus propias reservas
+CREATE POLICY "Users can update their own reservas"
+  ON public.reservas FOR UPDATE
+  USING (auth.uid() = user_id);
 
-create policy "Owners can update reservas for their establecimientos"
-  on public.reservas for update
-  using (
-    exists (
-      select 1 from public.establecimientos
-      where id = establecimiento_id and owner_id = auth.uid()
+-- Dueños pueden actualizar estado de reservas de sus zonas
+CREATE POLICY "Owners can update reservas for their zonas"
+  ON public.reservas FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.zonas z
+      JOIN public.establecimientos e ON z.establecimiento_id = e.id
+      WHERE z.id = zona_id AND e.owner_id = auth.uid()
     )
   );

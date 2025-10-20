@@ -11,8 +11,9 @@ import { Separator } from "@/components/ui/separator"
 import { useAppContext } from "@/contexts/AppContext"
 import { useAuth } from "@/hooks/useAuth"
 import { useReserva } from "@/hooks/useReserva"
+import { useReservas } from "@/hooks/useReservas"
 import { Calendar, Clock, MapPin, CreditCard, Smartphone, Building2 } from "lucide-react"
-import { formatearPrecio } from "@/utils/formatters"
+import { formatearPrecio, formatearFechaLocal } from "@/utils/formatters"
 import { useRouter } from "next/navigation"
 import type { Reserva } from "@/types"
 
@@ -20,48 +21,67 @@ export function CheckoutModal() {
   const { state, dispatch } = useAppContext()
   const { user } = useAuth()
   const { cerrarCheckout } = useReserva()
+  const { crearReserva } = useReservas()
   const router = useRouter()
-  const [metodoPago, setMetodoPago] = useState("tarjeta")
+  const [metodoPago, setMetodoPago] = useState("efectivo")
   const [isProcessing, setIsProcessing] = useState(false)
 
   const { checkout } = state
   const reservaData = checkout.reservaData
 
-  if (!reservaData) return null
+  if (!reservaData || !reservaData.cancha || !reservaData.zona) return null
 
   const handleConfirmarReserva = async () => {
     if (!user) return
 
     setIsProcessing(true)
 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    const nuevaReserva: Reserva = {
-      id: `res-${Date.now()}`,
-      userId: user.id,
-      canchaId: reservaData.cancha.id,
-      zonaId: reservaData.zona.id,
-      fecha: reservaData.fecha.toISOString().split("T")[0],
-      horarios: reservaData.horarios,
-      precio: reservaData.total,
-      estado: "confirmada",
-      fechaCreacion: new Date().toISOString(),
-      metodoPago,
-      establecimiento: reservaData.cancha.establecimiento,
-      cancha: reservaData.cancha.nombre,
-      zona: reservaData.zona.nombre,
-      direccion: reservaData.cancha.direccion,
-      telefono: reservaData.cancha.telefono,
+      // Generar código de verificación único (6 dígitos)
+      const codigoVerificacion = Math.random().toString().slice(2, 8).padStart(6, '0')
+
+      const reservaData_API = {
+        userId: user.id,
+        usuarioNombre: user.nombre,
+        usuarioEmail: user.email,
+        usuarioTelefono: user.telefono || "No proporcionado",
+        canchaId: 0, // Campo deprecated, ya no se usa
+        zonaId: reservaData.zona!.id,
+        fecha: formatearFechaLocal(reservaData.fecha),
+        horarios: reservaData.horarios,
+        precio: reservaData.total,
+        estado: "pendiente" as const,
+        metodoPago,
+        establecimiento: reservaData.cancha!.establecimiento,
+        cancha: reservaData.cancha!.nombre,
+        zona: reservaData.zona!.nombre,
+        direccion: reservaData.cancha!.direccion,
+        telefono: reservaData.cancha!.telefono,
+        codigoVerificacion,
+      }
+
+      // Guardar en Supabase
+      const reservaCreada = await crearReserva(reservaData_API)
+
+      // Crear objeto completo para el dispatch (con id y fechaCreacion)
+      const nuevaReserva: Reserva = {
+        id: reservaCreada.id,
+        ...reservaData_API,
+        fechaCreacion: reservaCreada.fecha_creacion || new Date().toISOString(),
+      }
+
+      dispatch({ type: "CONFIRMAR_RESERVA", payload: nuevaReserva })
+
+      router.push(`/confirmacion/${nuevaReserva.id}`)
+    } catch (error) {
+      console.error("Error al crear reserva:", error)
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear la reserva"
+      alert(`Hubo un error al crear la reserva:\n\n${errorMessage}\n\nPor favor intenta nuevamente.`)
+    } finally {
+      setIsProcessing(false)
     }
-
-    const reservasExistentes = JSON.parse(localStorage.getItem("reservas") || "[]")
-    reservasExistentes.push(nuevaReserva)
-    localStorage.setItem("reservas", JSON.stringify(reservasExistentes))
-
-    dispatch({ type: "CONFIRMAR_RESERVA", payload: nuevaReserva })
-    setIsProcessing(false)
-
-    router.push(`/confirmacion/${nuevaReserva.id}`)
   }
 
   return (
@@ -81,9 +101,9 @@ export function CheckoutModal() {
               <div className="flex items-center">
                 <Building2 className="mr-2 h-4 w-4 text-gray-500" />
                 <div>
-                  <p className="font-medium">{reservaData.cancha.establecimiento}</p>
+                  <p className="font-medium">{reservaData.cancha!.establecimiento}</p>
                   <p className="text-sm text-gray-600">
-                    {reservaData.cancha.nombre} - {reservaData.zona.nombre}
+                    {reservaData.cancha!.nombre} - {reservaData.zona!.nombre}
                   </p>
                 </div>
               </div>
@@ -107,7 +127,7 @@ export function CheckoutModal() {
 
               <div className="flex items-center">
                 <MapPin className="mr-2 h-4 w-4 text-gray-500" />
-                <span className="text-sm">{reservaData.cancha.direccion}</span>
+                <span className="text-sm">{reservaData.cancha!.direccion}</span>
               </div>
 
               <Separator />
@@ -126,18 +146,24 @@ export function CheckoutModal() {
             </CardHeader>
             <CardContent>
               <RadioGroup value={metodoPago} onValueChange={setMetodoPago}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="tarjeta" id="tarjeta" />
-                  <Label htmlFor="tarjeta" className="flex items-center cursor-pointer">
+                <div className="flex items-center space-x-2 opacity-50">
+                  <RadioGroupItem value="tarjeta" id="tarjeta" disabled />
+                  <Label htmlFor="tarjeta" className="flex items-center cursor-not-allowed">
                     <CreditCard className="mr-2 h-4 w-4" />
                     Tarjeta de Crédito/Débito
+                    <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                      En desarrollo
+                    </span>
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yape" id="yape" />
-                  <Label htmlFor="yape" className="flex items-center cursor-pointer">
+                <div className="flex items-center space-x-2 opacity-50">
+                  <RadioGroupItem value="yape" id="yape" disabled />
+                  <Label htmlFor="yape" className="flex items-center cursor-not-allowed">
                     <Smartphone className="mr-2 h-4 w-4" />
                     Yape / Plin
+                    <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                      En desarrollo
+                    </span>
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -148,39 +174,6 @@ export function CheckoutModal() {
                   </Label>
                 </div>
               </RadioGroup>
-
-              {metodoPago === "tarjeta" && (
-                <div className="mt-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="numero-tarjeta">Número de tarjeta</Label>
-                      <Input id="numero-tarjeta" placeholder="1234 5678 9012 3456" />
-                    </div>
-                    <div>
-                      <Label htmlFor="nombre-tarjeta">Nombre en la tarjeta</Label>
-                      <Input id="nombre-tarjeta" placeholder="Juan Pérez" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="expiracion">Fecha de expiración</Label>
-                      <Input id="expiracion" placeholder="MM/AA" />
-                    </div>
-                    <div>
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input id="cvv" placeholder="123" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {metodoPago === "yape" && (
-                <div className="mt-4 p-4 bg-purple-50 rounded-lg text-center">
-                  <p className="text-sm text-purple-800">
-                    Después de confirmar, recibirás las instrucciones para completar el pago por Yape o Plin
-                  </p>
-                </div>
-              )}
 
               {metodoPago === "efectivo" && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">

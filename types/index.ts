@@ -11,6 +11,8 @@ export interface Zona {
   capacidad: number
   caracteristicas: string[]
   descripcion: string
+  establecimientoId?: string
+  disponible?: boolean
 }
 
 export interface Cancha {
@@ -39,6 +41,8 @@ export interface HorariosReservados {
   }
 }
 
+export type EstadoHorario = "disponible" | "reservado" | "mantenimiento" | "bloqueado"
+
 export interface FiltrosState {
   tipo: string
   ubicacion: string
@@ -58,6 +62,9 @@ export interface ReservaState {
 export interface Reserva {
   id: string
   userId: string
+  usuarioNombre: string
+  usuarioEmail: string
+  usuarioTelefono: string
   canchaId: number
   zonaId: string
   fecha: string
@@ -71,6 +78,33 @@ export interface Reserva {
   zona: string
   direccion: string
   telefono: string
+  codigoVerificacion: string
+}
+
+export interface Bloqueo {
+  id: string
+  zonaId: string
+  zonaNombre: string
+  fecha: string
+  horaInicio: string
+  horaFin: string
+  motivo: "mantenimiento" | "evento" | "otro"
+  descripcion: string
+  canchaId: number
+  ownerId?: string
+}
+
+export interface Establecimiento {
+  id: string
+  nombre: string
+  descripcion: string
+  direccion: string
+  telefono: string
+  horarioAtencion: string
+  servicios: string[]
+  ubicacion: string
+  foto: string
+  ownerId: string
 }
 
 export interface CheckoutState {

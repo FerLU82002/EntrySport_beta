@@ -18,6 +18,14 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.production.example
+
+# production logs
+logs/
+*.log
+
+# PM2
+.pm2/
 
 # vercel
 .vercel
@@ -25,3 +33,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local env files
+DEPLOYMENT.md
+DEPLOYMENT_PROD.md
+PASSWORD_RECOVERY.md
+DEPLOYMENT_QUICK.md
+DEPLOYMENT_INDEX.md
+COMANDOS.md
+CHECKLIST.md
+ARCHITECTURE.md
+ecosystem.config.js
+.env.production
+.env.production.example
+.env.local
+README.md
+scripts/*
+
+

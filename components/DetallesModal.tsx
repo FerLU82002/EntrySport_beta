@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { MapPin, Star, Clock, Phone, Users, CheckCircle, XCircle, Info, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,8 +12,11 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useReserva } from "@/hooks/useReserva"
+import { useBloqueos } from "@/hooks/useBloqueos"
 import { horariosDisponibles, horariosConEstado, type EstadoHorario } from "@/data/canchas"
 import { formatearPrecio } from "@/utils/formatters"
+import type { Bloqueo } from "@/types"
+import { createClient } from "@/lib/supabase/client"
 
 export function DetallesModal() {
   const {
@@ -26,14 +30,104 @@ export function DetallesModal() {
     realizarReserva,
   } = useReserva()
 
+  const { fetchBloqueosByZona } = useBloqueos()
+  const [bloqueos, setBloqueos] = useState<Bloqueo[]>([])
+  const [isLoadingBloqueos, setIsLoadingBloqueos] = useState(false)
+  const [horariosReservados, setHorariosReservados] = useState<string[]>([])
+  const [isLoadingReservas, setIsLoadingReservas] = useState(false)
+  const supabase = createClient()
+
+  // Cargar bloqueos desde Supabase cuando cambia la zona o la fecha
+  useEffect(() => {
+    const cargarBloqueos = async () => {
+      if (!reserva.selectedZona?.id) return
+
+      try {
+        setIsLoadingBloqueos(true)
+        const bloqueosData = await fetchBloqueosByZona(reserva.selectedZona.id)
+        setBloqueos(bloqueosData || [])
+      } catch (error) {
+        console.error('Error cargando bloqueos:', error)
+        setBloqueos([])
+      } finally {
+        setIsLoadingBloqueos(false)
+      }
+    }
+
+    cargarBloqueos()
+  }, [reserva.selectedZona?.id, reserva.selectedDate, fetchBloqueosByZona])
+
+  // Cargar reservas existentes para marcar horarios como reservados
+  useEffect(() => {
+    const cargarReservas = async () => {
+      if (!reserva.selectedZona?.id || !reserva.selectedDate) return
+
+      try {
+        setIsLoadingReservas(true)
+        const fechaFormateada = reserva.selectedDate.toISOString().split('T')[0]
+
+        // Buscar reservas confirmadas o pendientes para esta zona y fecha
+        const { data, error } = await supabase
+          .from('reservas')
+          .select('horarios')
+          .eq('zona_id', reserva.selectedZona.id)
+          .eq('fecha', fechaFormateada)
+          .in('estado', ['confirmada', 'pendiente'])
+
+        if (error) {
+          console.error('Error al cargar reservas:', error)
+          setHorariosReservados([])
+          return
+        }
+
+        // Extraer y aplanar todos los horarios reservados
+        const horariosOcupados = data?.flatMap(reserva => reserva.horarios || []) || []
+        setHorariosReservados(horariosOcupados)
+      } catch (error) {
+        console.error('Error cargando reservas:', error)
+        setHorariosReservados([])
+      } finally {
+        setIsLoadingReservas(false)
+      }
+    }
+
+    cargarReservas()
+  }, [reserva.selectedZona?.id, reserva.selectedDate, supabase])
+
   if (!reserva.selectedCancha) return null
 
   const getEstadoHorario = (horario: string): EstadoHorario => {
     if (!reserva.selectedCancha || !reserva.selectedZona) return "disponible"
 
     const fechaKey = reserva.selectedDate.toISOString().split("T")[0]
+    
+    // PRIMERO: Verificar si el horario está reservado en la base de datos
+    if (horariosReservados.includes(horario)) {
+      return "reservado"
+    }
+    
+    // SEGUNDO: Verificar bloqueos del localStorage para canchas de dueños
+    const bloqueoEncontrado = bloqueos.find((bloqueo) => {
+      if (bloqueo.zonaId !== reserva.selectedZona?.id) return false
+      if (bloqueo.fecha !== fechaKey) return false
+      
+      // Convertir horarios a formato comparable
+      const horario24 = convertirA24Horas(horario)
+      const bloqInicio = bloqueo.horaInicio.replace(":", "")
+      const bloqFin = bloqueo.horaFin.replace(":", "")
+      const hora24 = horario24.replace(":", "")
+      
+      return hora24 >= bloqInicio && hora24 < bloqFin
+    })
+    
+    if (bloqueoEncontrado) {
+      return bloqueoEncontrado.motivo === "mantenimiento" ? "mantenimiento" : "bloqueado"
+    }
+    
+    // TERCERO: Verificar datos de estado estáticos (para canchas de demo)
     const estadosCancha = horariosConEstado[reserva.selectedCancha.id]
-
+    
+    // Si no hay datos de estado (canchas de dueños sin bloqueos), están disponibles
     if (!estadosCancha) return "disponible"
 
     const estadosZona = estadosCancha[reserva.selectedZona.id]
@@ -43,6 +137,21 @@ export function DetallesModal() {
     if (!estadosFecha) return "disponible"
 
     return estadosFecha[horario] || "disponible"
+  }
+  
+  // Función auxiliar para convertir hora de 12h a 24h
+  const convertirA24Horas = (hora12: string): string => {
+    const [tiempo, periodo] = hora12.split(" ")
+    let [horas, minutos] = tiempo.split(":")
+    let horasNum = Number.parseInt(horas)
+    
+    if (periodo === "PM" && horasNum !== 12) {
+      horasNum += 12
+    } else if (periodo === "AM" && horasNum === 12) {
+      horasNum = 0
+    }
+    
+    return `${horasNum.toString().padStart(2, "0")}:${minutos}`
   }
 
   const getEstadoColor = (estado: EstadoHorario) => {
@@ -180,11 +289,9 @@ export function DetallesModal() {
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
-                  allowFullScreen=""
                   loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
                   title={`Mapa de ${reserva.selectedCancha.establecimiento}`}
-                ></iframe>
+                />
               </div>
               <div className="mt-2 flex items-center justify-between text-sm text-gray-600">
                 <span className="flex items-center">
@@ -245,7 +352,11 @@ export function DetallesModal() {
                         mode="single"
                         selected={reserva.selectedDate}
                         onSelect={(date) => date && setFecha(date)}
-                        disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        disabled={(date) => {
+                          const hoy = new Date()
+                          hoy.setHours(0, 0, 0, 0)
+                          return date < hoy
+                        }}
                         className="rounded-md border mt-2"
                       />
                     </div>
@@ -282,6 +393,7 @@ export function DetallesModal() {
                             const estado = getEstadoHorario(horario)
                             const disponible = estado === "disponible"
                             const seleccionado = reserva.selectedHorarios.includes(horario)
+                            const estaReservado = estado === "reservado"
 
                             return (
                               <div key={horario} className="relative">
@@ -289,20 +401,29 @@ export function DetallesModal() {
                                   variant={seleccionado ? "default" : disponible ? "outline" : "secondary"}
                                   size="sm"
                                   disabled={!disponible}
-                                  onClick={() => disponible && toggleHorario(horario)}
+                                  onClick={() => {
+                                    if (disponible) {
+                                      toggleHorario(horario)
+                                    }
+                                  }}
                                   className={`w-full text-xs font-medium ${
                                     seleccionado
                                       ? "bg-green-600 hover:bg-green-700 text-white"
                                       : disponible
                                         ? "hover:bg-green-50 hover:border-green-300"
-                                        : "opacity-60 cursor-not-allowed"
+                                        : estaReservado
+                                          ? "bg-red-100 text-red-700 border-red-300 opacity-60 cursor-not-allowed"
+                                          : "opacity-60 cursor-not-allowed"
                                   }`}
                                 >
                                   <div className="flex items-center justify-between w-full">
-                                    <span>{horario}</span>
+                                    <span className="truncate">
+                                      {horario}
+                                      {estaReservado && <span className="ml-1 text-[10px]">(Reservado)</span>}
+                                    </span>
                                     {!seleccionado && (
                                       <span
-                                        className={`ml-2 w-2 h-2 rounded-full ${
+                                        className={`ml-2 w-2 h-2 rounded-full flex-shrink-0 ${
                                           estado === "disponible"
                                             ? "bg-green-500"
                                             : estado === "reservado"

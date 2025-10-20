@@ -4,7 +4,17 @@ import type { NextRequest } from "next/server"
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const publicRoutes = ["/", "/auth/login", "/auth/sign-up", "/auth/sign-up-success", "/login"]
+  const publicRoutes = [
+    "/", 
+    "/auth/login", 
+    "/auth/sign-up", 
+    "/auth/sign-up-success", 
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/login", 
+    "/debug",
+    "/test-db"
+  ]
 
   // Permitir acceso a rutas públicas
   if (publicRoutes.some((route) => pathname === route)) {

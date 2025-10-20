@@ -1,373 +1,15 @@
 import type { Cancha, HorariosReservados, EstadoHorario } from "@/types"
 
-// Completar todos los horarios reservados
-export const horariosReservados: HorariosReservados = {
-  1: {
-    "zona-a": {
-      "2024-12-06": ["09:00", "10:00", "15:00", "16:00", "19:00"],
-      "2024-12-07": ["08:00", "14:00", "17:00", "20:00"],
-      "2024-12-08": ["10:00", "11:00", "16:00", "18:00", "21:00"],
-    },
-  },
-  2: {
-    "zona-a": {
-      "2024-12-06": ["12:00", "13:00", "18:00", "19:00"],
-      "2024-12-07": ["09:00", "15:00", "16:00"],
-      "2024-12-08": ["14:00", "17:00", "20:00"],
-    },
-    "zona-b": {
-      "2024-12-06": ["10:00", "11:00", "16:00", "17:00"],
-      "2024-12-07": ["12:00", "13:00", "18:00", "19:00"],
-      "2024-12-08": ["08:00", "15:00", "21:00"],
-    },
-  },
-  3: {
-    "zona-unica": {
-      "2024-12-06": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-      "2024-12-07": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-      "2024-12-08": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-    },
-  },
-  4: {
-    "cancha-1": {
-      "2024-12-06": ["11:00", "14:00", "17:00"],
-      "2024-12-07": ["10:00", "13:00", "16:00", "19:00"],
-      "2024-12-08": ["09:00", "12:00", "15:00", "18:00"],
-    },
-    "cancha-2": {
-      "2024-12-06": ["09:00", "12:00", "15:00", "18:00"],
-      "2024-12-07": ["11:00", "14:00", "17:00", "20:00"],
-      "2024-12-08": ["10:00", "13:00", "16:00", "19:00"],
-    },
-  },
-  5: {
-    "cancha-principal": {
-      "2024-12-06": ["13:00", "14:00", "19:00", "20:00"],
-      "2024-12-07": ["11:00", "16:00", "17:00"],
-      "2024-12-08": ["10:00", "15:00", "21:00"],
-    },
-  },
-  6: {
-    "arena-1": {
-      "2024-12-06": ["16:00", "17:00", "18:00"],
-      "2024-12-07": ["12:00", "13:00", "19:00", "20:00"],
-      "2024-12-08": ["11:00", "14:00", "16:00"],
-    },
-    "arena-2": {
-      "2024-12-06": ["14:00", "15:00", "20:00", "21:00"],
-      "2024-12-07": ["10:00", "11:00", "17:00", "18:00"],
-      "2024-12-08": ["13:00", "15:00", "19:00"],
-    },
-  },
-  7: {
-    "zona-a": {
-      "2024-12-06": ["10:00", "11:00", "17:00", "18:00"],
-      "2024-12-07": ["09:00", "14:00", "15:00", "20:00"],
-      "2024-12-08": ["12:00", "13:00", "19:00"],
-    },
-  },
-  8: {
-    "cancha-express": {
-      "2024-12-06": ["08:00", "12:00", "16:00", "20:00"],
-      "2024-12-07": ["10:00", "11:00", "18:00", "19:00"],
-      "2024-12-08": ["09:00", "15:00", "17:00", "21:00"],
-    },
-  },
-  9: {
-    "campo-vip": {
-      "2024-12-06": ["14:00", "15:00", "16:00", "17:00"],
-      "2024-12-07": ["13:00", "18:00", "19:00"],
-      "2024-12-08": ["11:00", "12:00", "20:00", "21:00"],
-    },
-  },
-  10: {
-    "court-1": {
-      "2024-12-06": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-      "2024-12-07": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-      "2024-12-08": [
-        "08:00",
-        "09:00",
-        "10:00",
-        "11:00",
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-      ],
-    },
-  },
-  11: {
-    "cancha-multiusos": {
-      "2024-12-06": ["15:00", "16:00", "19:00"],
-      "2024-12-07": ["12:00", "17:00", "18:00", "20:00"],
-      "2024-12-08": ["10:00", "13:00", "14:00", "21:00"],
-    },
-  },
-  12: {
-    "arena-central": {
-      "2024-12-06": ["11:00", "18:00", "19:00", "20:00"],
-      "2024-12-07": ["09:00", "10:00", "15:00", "16:00"],
-      "2024-12-08": ["12:00", "17:00", "18:00"],
-    },
-  },
-}
+// Re-export EstadoHorario for convenience
+export type { EstadoHorario } from "@/types"
 
-// Completar todos los datos de canchas que faltaban
-export const canchas: Cancha[] = [
-  {
-    id: 1,
-    nombre: "Complejo Deportivo Los Campeones",
-    establecimiento: "Complejo Deportivo Los Campeones",
-    tipo: "Fútbol 11",
-    imagen: "/modern-football-field.jpg",
-    ubicacion: "Huánuco, Huánuco",
-    direccion: "Jr. 28 de Julio 456, Huánuco",
-    coordenadas: { lat: -9.9306, lng: -76.2422 },
-    rating: 4.9,
-    disponible: true,
-    telefono: "+51 962 123 456",
-    descripcion: "Complejo deportivo premium con cancha principal de fútbol 11 certificada.",
-    servicios: ["Vestuarios con duchas", "Estacionamiento amplio", "Cafetería", "Primeros auxilios", "Seguridad 24h"],
-    horarioAtencion: "Lunes a Domingo: 6:00 AM - 11:00 PM",
-    zonas: [
-      {
-        id: "zona-a",
-        nombre: "Cancha Principal",
-        tipo: "Fútbol 11",
-        precio: 150,
-        capacidad: 22,
-        caracteristicas: ["Césped sintético", "Iluminación LED", "Vestuarios premium", "Graderías"],
-        descripcion: "Cancha principal con césped sintético de alta calidad.",
-      },
-    ],
-  },
-  {
-    id: 2,
-    nombre: "Centro Deportivo Tingo María",
-    establecimiento: "Centro Deportivo Tingo María",
-    tipo: "Fútbol 7",
-    imagen: "/soccer-field-tingo-maria.jpg",
-    ubicacion: "Tingo María, Leoncio Prado",
-    direccion: "Av. Tito Jaime 890, Tingo María",
-    coordenadas: { lat: -9.2945, lng: -75.9947 },
-    rating: 4.7,
-    disponible: true,
-    telefono: "+51 962 234 567",
-    descripcion: "Centro deportivo con múltiples canchas de fútbol 7 en Tingo María.",
-    servicios: ["Vestuarios", "Parqueadero", "Alquiler de balones", "Hidratación", "Tienda deportiva"],
-    horarioAtencion: "Lunes a Domingo: 7:00 AM - 10:00 PM",
-    zonas: [
-      {
-        id: "zona-a",
-        nombre: "Cancha Rápida A",
-        tipo: "Fútbol 7",
-        precio: 100,
-        capacidad: 14,
-        caracteristicas: ["Césped sintético", "Iluminación nocturna", "Vestuarios", "Graderías"],
-        descripcion: "Cancha principal con mejor ubicación y servicios premium.",
-      },
-      {
-        id: "zona-b",
-        nombre: "Cancha Rápida B",
-        tipo: "Fútbol 7",
-        precio: 80,
-        capacidad: 14,
-        caracteristicas: ["Césped sintético", "Iluminación básica", "Vestuarios"],
-        descripcion: "Cancha secundaria, excelente relación calidad-precio.",
-      },
-    ],
-  },
-  {
-    id: 3,
-    nombre: "Sintéticos Amarilis",
-    establecimiento: "Sintéticos Amarilis",
-    tipo: "Fútbol 5",
-    imagen: "/small-soccer-field.jpg",
-    ubicacion: "Amarilis, Huánuco",
-    direccion: "Av. Universitaria 234, Amarilis",
-    coordenadas: { lat: -9.9189, lng: -76.2356 },
-    rating: 4.5,
-    disponible: true,
-    telefono: "+51 962 345 678",
-    descripcion: "Cancha de fútbol 5 moderna en el distrito de Amarilis.",
-    servicios: ["Graderías", "Tienda deportiva", "Vestuarios", "Estacionamiento"],
-    horarioAtencion: "Lunes a Domingo: 6:00 AM - 11:00 PM",
-    zonas: [
-      {
-        id: "zona-unica",
-        nombre: "Cancha Express",
-        tipo: "Fútbol 5",
-        precio: 60,
-        capacidad: 10,
-        caracteristicas: ["Césped sintético", "Iluminación LED", "Graderías", "Vestuarios"],
-        descripcion: "Cancha de fútbol 5 ideal para partidos rápidos entre amigos.",
-      },
-    ],
-  },
-  {
-    id: 4,
-    nombre: "Polideportivo Pillco Marca",
-    establecimiento: "Polideportivo Pillco Marca",
-    tipo: "Básquetbol",
-    imagen: "/outdoor-basketball-court.png",
-    ubicacion: "Pillco Marca, Huánuco",
-    direccion: "Jr. Los Pinos 567, Pillco Marca",
-    coordenadas: { lat: -9.8756, lng: -76.2189 },
-    rating: 4.6,
-    disponible: true,
-    telefono: "+51 962 456 789",
-    descripcion: "Polideportivo cubierto con cancha de básquetbol profesional.",
-    servicios: ["Cancha cubierta", "Graderías", "Vestuarios", "Marcador electrónico", "Cafetería"],
-    horarioAtencion: "Lunes a Domingo: 8:00 AM - 10:00 PM",
-    zonas: [
-      {
-        id: "cancha-principal",
-        nombre: "Cancha Cubierta Principal",
-        tipo: "Básquetbol",
-        precio: 80,
-        capacidad: 10,
-        caracteristicas: ["Cancha cubierta", "Piso sintético", "Graderías", "Marcador electrónico"],
-        descripcion: "Cancha principal cubierta con piso sintético profesional.",
-      },
-    ],
-  },
-  {
-    id: 5,
-    nombre: "Complejo Deportivo Panao",
-    establecimiento: "Complejo Deportivo Panao",
-    tipo: "Fútbol 7",
-    imagen: "/mountain-soccer-field.jpg",
-    ubicacion: "Panao, Pachitea",
-    direccion: "Plaza de Armas s/n, Panao",
-    coordenadas: { lat: -9.8889, lng: -76.0167 },
-    rating: 4.4,
-    disponible: true,
-    telefono: "+51 962 567 890",
-    descripcion: "Complejo deportivo en la provincia de Pachitea con vista a las montañas.",
-    servicios: ["Vestuarios", "Estacionamiento", "Alquiler de balones", "Seguridad"],
-    horarioAtencion: "Lunes a Domingo: 7:00 AM - 9:00 PM",
-    zonas: [
-      {
-        id: "cancha-1",
-        nombre: "Cancha Sintética",
-        tipo: "Fútbol 7",
-        precio: 70,
-        capacidad: 14,
-        caracteristicas: ["Césped sintético", "Iluminación", "Vestuarios", "Vista panorámica"],
-        descripcion: "Cancha de fútbol 7 con hermosa vista a las montañas de Pachitea.",
-      },
-    ],
-  },
-  {
-    id: 6,
-    nombre: "Arena Deportiva Rupa Rupa",
-    establecimiento: "Arena Deportiva Rupa Rupa",
-    tipo: "Vóley",
-    imagen: "/outdoor-volleyball-court.png",
-    ubicacion: "Rupa Rupa, Leoncio Prado",
-    direccion: "Av. Alameda Perú 123, Rupa Rupa",
-    coordenadas: { lat: -9.2778, lng: -75.9889 },
-    rating: 4.3,
-    disponible: true,
-    telefono: "+51 962 678 901",
-    descripcion: "Arena deportiva especializada en vóley con arena de calidad.",
-    servicios: ["Duchas", "Alquiler de equipos", "Zona de descanso", "Cafetería"],
-    horarioAtencion: "Lunes a Domingo: 8:00 AM - 8:00 PM",
-    zonas: [
-      {
-        id: "arena-1",
-        nombre: "Arena Principal",
-        tipo: "Vóley",
-        precio: 65,
-        capacidad: 12,
-        caracteristicas: ["Arena de calidad", "Red profesional", "Graderías", "Iluminación"],
-        descripcion: "Arena principal con arena de calidad y red profesional.",
-      },
-    ],
-  },
-]
+// Datos de prueba eliminados - Todos los establecimientos ahora se cargan desde Supabase
+export const horariosReservados: HorariosReservados = {}
 
+// Array vacío - Los establecimientos se cargan dinámicamente desde Supabase
+export const canchas: Cancha[] = []
+
+// Configuración de ubicaciones por región - Usado para filtros
 export const ubicacionesHuanuco = {
   departamento: "Huánuco",
   provincias: {
@@ -383,8 +25,10 @@ export const ubicacionesHuanuco = {
   },
 }
 
+// Tipos de cancha disponibles - Usado para filtros
 export const tiposCancha = ["Todos", "Fútbol 11", "Fútbol 7", "Fútbol 5", "Tenis", "Básquetbol", "Vóley"]
 
+// Regiones y distritos - Usado para filtros
 export const regiones = {
   Todas: [],
   Lima: [
@@ -406,6 +50,7 @@ export const regiones = {
   Cusco: ["Cusco", "Wanchaq", "San Sebastián", "San Jerónimo"],
 }
 
+// Lista plana de ubicaciones - Usado para filtros
 export const ubicaciones = [
   "Todas",
   "Victoria",
@@ -426,8 +71,10 @@ export const ubicaciones = [
   "Pillco Marca",
 ]
 
+// Rangos de precio - Usado para filtros
 export const rangosPrecio = ["Todos", "Menos de S/80", "S/80 - S/150", "Más de S/150"]
 
+// Horarios disponibles generales - Usado para mostrar opciones
 export const horariosDisponibles = [
   "06:00 AM",
   "07:00 AM",
@@ -449,32 +96,5 @@ export const horariosDisponibles = [
   "11:00 PM",
 ]
 
-export const horariosConEstado: Record<number, Record<string, Record<string, Record<string, EstadoHorario>>>> = {
-  1: {
-    "zona-a": {
-      "2024-12-20": {
-        "09:00 AM": "reservado",
-        "10:00 AM": "reservado",
-        "03:00 PM": "mantenimiento",
-        "04:00 PM": "reservado",
-        "07:00 PM": "reservado",
-      },
-    },
-  },
-  2: {
-    "zona-a": {
-      "2024-12-20": {
-        "12:00 PM": "reservado",
-        "01:00 PM": "reservado",
-        "06:00 PM": "mantenimiento",
-      },
-    },
-    "zona-b": {
-      "2024-12-20": {
-        "10:00 AM": "reservado",
-        "11:00 AM": "reservado",
-        "04:00 PM": "reservado",
-      },
-    },
-  },
-}
+// Datos de prueba eliminados - Los estados de horarios se cargan desde Supabase (reservas y bloqueos)
+export const horariosConEstado: Record<number, Record<string, Record<string, Record<string, EstadoHorario>>>> = {}

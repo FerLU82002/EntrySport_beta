@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext, useCallback, useMemo, type ReactNode } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export interface User {
   id: string
@@ -23,98 +24,224 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const DEMO_USERS: Record<string, User> = {
-  "usuario@gmail.com": {
-    id: "user-1",
-    email: "usuario@gmail.com",
-    nombre: "Usuario General",
-    telefono: "+51 987 654 321",
-    tipo: "usuario",
-    role: "usuario",
-  },
-  "admin@gmail.com": {
-    id: "admin-1",
-    email: "admin@gmail.com",
-    nombre: "Dueño de Cancha",
-    telefono: "+51 987 654 322",
-    tipo: "dueno",
-    role: "dueno",
-  },
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("auth-user")
-    if (savedUser) {
+    // Primero intentar cargar desde localStorage para acelerar
+    const cachedUser = localStorage.getItem("auth-user")
+    if (cachedUser) {
       try {
-        const parsedUser = JSON.parse(savedUser)
-        if (!parsedUser.role) {
-          parsedUser.role = parsedUser.tipo
-        }
-        setUser(parsedUser)
-      } catch (error) {
+        const userData = JSON.parse(cachedUser)
+        setUser(userData)
+        setIsLoading(false)
+        
+        // Validar en segundo plano
+        setTimeout(() => validateSession(), 100)
+        return
+      } catch (e) {
         localStorage.removeItem("auth-user")
       }
     }
-    setIsLoading(false)
-  }, [])
+    
+    // Si no hay cache, verificar sesión
+    validateSession()
+    
+    async function validateSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error) {
+          setUser(null)
+          setIsLoading(false)
+          return
+        }
+        
+        if (session?.user) {
+          // Obtener perfil del usuario
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profile) {
+            const userData: User = {
+              id: profile.id,
+              email: profile.email,
+              nombre: profile.nombre,
+              telefono: profile.telefono,
+              tipo: profile.role,
+              role: profile.role,
+            }
+            setUser(userData)
+            localStorage.setItem("auth-user", JSON.stringify(userData))
+          }
+        } else {
+          setUser(null)
+          localStorage.removeItem("auth-user")
+        }
+      } catch (error) {
+        console.error("Error en validateSession:", error)
+        setUser(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Escuchar cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (profile) {
+          const userData: User = {
+            id: profile.id,
+            email: profile.email,
+            nombre: profile.nombre,
+            telefono: profile.telefono,
+            tipo: profile.role,
+            role: profile.role,
+          }
+          setUser(userData)
+          localStorage.setItem("auth-user", JSON.stringify(userData))
+        }
+      } else {
+        setUser(null)
+        localStorage.removeItem("auth-user")
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    const demoUser = DEMO_USERS[email]
-    if (demoUser && password.length >= 6) {
-      setUser(demoUser)
-      localStorage.setItem("auth-user", JSON.stringify(demoUser))
-      document.cookie = `auth-user=${JSON.stringify(demoUser)}; path=/; max-age=86400`
+      if (error) {
+        console.error("Error en login:", error.message)
+        setIsLoading(false)
+        return false
+      }
+
+      if (data.user) {
+        // Obtener perfil del usuario
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single()
+        
+        if (profile) {
+          const userData: User = {
+            id: profile.id,
+            email: profile.email,
+            nombre: profile.nombre,
+            telefono: profile.telefono,
+            tipo: profile.role,
+            role: profile.role,
+          }
+          setUser(userData)
+          localStorage.setItem("auth-user", JSON.stringify(userData))
+          setIsLoading(false)
+          return true
+        }
+      }
+
       setIsLoading(false)
-      return true
+      return false
+    } catch (error) {
+      console.error("Error en login:", error)
+      setIsLoading(false)
+      return false
     }
-
-    setIsLoading(false)
-    return false
-  }, [])
+  }, [supabase])
 
   const register = useCallback(
     async (email: string, password: string, nombre: string, telefono?: string): Promise<boolean> => {
       setIsLoading(true)
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      if (password.length >= 6 && nombre.trim()) {
-        const newUser: User = {
-          id: `user-${Date.now()}`,
+      try {
+        const { data, error } = await supabase.auth.signUp({
           email,
-          nombre,
-          telefono,
-          tipo: "usuario",
-          role: "usuario",
+          password,
+          options: {
+            data: {
+              nombre,
+              telefono,
+              role: 'usuario', // Por defecto todos son usuarios
+            },
+          },
+        })
+
+        if (error) {
+          console.error("Error en registro:", error.message)
+          setIsLoading(false)
+          return false
         }
 
-        setUser(newUser)
-        localStorage.setItem("auth-user", JSON.stringify(newUser))
-        document.cookie = `auth-user=${JSON.stringify(newUser)}; path=/; max-age=86400`
-        setIsLoading(false)
-        return true
-      }
+        if (data.user) {
+          // El trigger creará automáticamente el perfil
+          setIsLoading(false)
+          return true
+        }
 
-      setIsLoading(false)
-      return false
+        setIsLoading(false)
+        return false
+      } catch (error) {
+        console.error("Error en registro:", error)
+        setIsLoading(false)
+        return false
+      }
     },
-    [],
+    [supabase],
   )
 
-  const logout = useCallback(() => {
-    setUser(null)
-    localStorage.removeItem("auth-user")
-    document.cookie = "auth-user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    window.location.href = "/"
-  }, [])
+  const logout = useCallback(async () => {
+    try {
+      // Limpiar localStorage inmediatamente
+      localStorage.removeItem("auth-user")
+      
+      // Limpiar cachés del usuario
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("mis-reservas-") || key.startsWith("admin-data-")) {
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // Limpiar sessionStorage
+      sessionStorage.clear()
+      
+      // Limpiar el estado del usuario inmediatamente
+      setUser(null)
+      
+      // Cerrar sesión en Supabase
+      await supabase.auth.signOut()
+      
+      // Redirigir después de un pequeño delay para asegurar que todo se limpió
+      setTimeout(() => {
+        window.location.href = "/"
+      }, 100)
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error)
+      // Incluso si hay error, redirigir
+      window.location.href = "/"
+    }
+  }, [supabase])
 
   const hasRole = useCallback(
     (role: string): boolean => {

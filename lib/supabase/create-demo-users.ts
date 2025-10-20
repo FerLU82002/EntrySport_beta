@@ -19,12 +19,12 @@ async function createDemoUsers() {
 
   // Crear usuario general
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
-    email: "usuario@gmail.com",
-    password: "demo123",
+    email: "usuario@demo.com",
+    password: "Demo123456!",
     email_confirm: true,
     user_metadata: {
-      nombre: "Usuario General",
-      telefono: "+51 987 654 321",
+      nombre: "Juan Pérez",
+      telefono: "987654321",
       role: "usuario",
     },
   })
@@ -38,12 +38,12 @@ async function createDemoUsers() {
 
   // Crear administrador/dueño
   const { data: adminData, error: adminError } = await supabaseAdmin.auth.admin.createUser({
-    email: "admin@gmail.com",
-    password: "demo123",
+    email: "dueno@demo.com",
+    password: "Demo123456!",
     email_confirm: true,
     user_metadata: {
-      nombre: "Dueño de Cancha",
-      telefono: "+51 987 654 322",
+      nombre: "Carlos Rodríguez",
+      telefono: "912345678",
       role: "dueno",
     },
   })

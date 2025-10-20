@@ -34,18 +34,33 @@ export default function LoginPage() {
 
       if (error) throw error
 
+      if (!data.user) {
+        throw new Error("No se pudo autenticar el usuario")
+      }
+
       // Obtener el perfil del usuario para verificar su rol
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single()
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single()
+
+      if (profileError) {
+        console.error("Error al obtener perfil:", profileError)
+        throw new Error("Error al obtener información del usuario")
+      }
+
+      // Pequeña pausa para asegurar que la sesión se guarde
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       // Redirigir según el rol
       if (profile?.role === "dueno") {
-        router.push("/admin")
+        window.location.href = "/admin"
       } else {
-        router.push(redirectTo)
+        window.location.href = redirectTo
       }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Error al iniciar sesión")
-    } finally {
       setIsLoading(false)
     }
   }
