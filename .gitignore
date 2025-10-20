@@ -48,6 +48,7 @@ ecosystem.config.js
 .env.production.example
 .env.local
 README.md
+envexample.md
 scripts/*
 
 
