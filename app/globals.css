@@ -90,3 +90,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos para el checkout de Culqi en modo contenedor */
+#culqi-checkout-container {
+  width: 100%;
+  min-height: 400px;
+}
+
+#culqi-checkout-container iframe {
+  width: 100% !important;
+  min-height: 400px !important;
+  border: none !important;
+  border-radius: 0.5rem;
+}
+
+/* Asegurar que los elementos de Culqi se vean bien dentro del contenedor */
+#culqi-checkout-container [class*="culqi"],
+#culqi-checkout-container [class*="Culqi"] {
+  max-width: 100% !important;
+}

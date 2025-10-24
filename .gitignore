@@ -17,7 +17,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files
-.env*
 !.env.production.example
 
 # production logs
@@ -44,6 +43,7 @@ COMANDOS.md
 CHECKLIST.md
 ARCHITECTURE.md
 ecosystem.config.js
+.env
 .env.production
 .env.production.example
 .env.local
