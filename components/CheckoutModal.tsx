@@ -462,7 +462,18 @@ export function CheckoutModal() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={metodoPago} onValueChange={setMetodoPago}>
+              <RadioGroup
+                value={metodoPago}
+                onValueChange={(value) => {
+                  // Cerrar el checkout de Culqi si está abierto
+                  if (isProcessing && metodoPago === "yape") {
+                    culqiInstanceRef.current?.close();
+                    setIsProcessing(false);
+                    setError("");
+                  }
+                  setMetodoPago(value);
+                }}
+              >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="yape" id="yape" />
                   <Label
