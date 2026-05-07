@@ -40,6 +40,7 @@ services:
       - certbot-webroot:/var/www/html
     environment:
       SSL_DOMAIN_1: ${SSL_DOMAIN_1}
+      SSL_DOMAIN_2: ${SSL_DOMAIN_2}
     depends_on:
       - web
 volumes:
